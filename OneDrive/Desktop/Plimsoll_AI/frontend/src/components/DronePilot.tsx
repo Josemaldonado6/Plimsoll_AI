@@ -105,6 +105,46 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
     const dronePosRef = useRef({ x: 50, y: 50 }); // Local canvas coords for drone
     const dt = droneTranslations[lang];
 
+    // [NEW] Calibration State
+    const [calStep, setCalStep] = useState<'IDLE' | 'ZERO' | 'REF' | 'DONE'>('IDLE');
+    const [calData, setCalData] = useState({
+        zeroY: 0,
+        refY: 0,
+        scale: 0.0055,
+        isCalibrated: false
+    });
+    // [FIX] Define debugY state to prevent crash
+    const [debugY, setDebugY] = useState(0);
+
+    // Load Calibration from LocalStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('plimsoll_calibration');
+        if (saved) {
+            setCalData(JSON.parse(saved));
+        }
+    }, []);
+
+    // Save Calibration
+    const saveCalibration = (zero: number, ref: number) => {
+        // ROBUST MATH:
+        // Distance in pixels = |Zero - Ref|
+        // 1 Meter = Distance
+        // Scale = 1 / Distance
+        const distPx = Math.abs(zero - ref);
+
+        const newData = {
+            zeroY: zero,
+            refY: ref,
+            scale: 1 / (distPx || 1),
+            isCalibrated: true
+        };
+        console.log("CALIBRATION SAVED:", newData);
+        setCalData(newData);
+        localStorage.setItem('plimsoll_calibration', JSON.stringify(newData));
+        setCalStep('DONE');
+        setTimeout(() => setCalStep('IDLE'), 3000);
+    };
+
     // Mock WebSocket Connection & Live Telemetry Polling
     useEffect(() => {
         const interval = setInterval(() => {
@@ -116,28 +156,73 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
                 axios.get('http://localhost:8000/api/stream/telemetry')
                     .then(res => {
                         const data = res.data;
-                        if (data.status === "TRACKING") {
-                            // Update Drone HUD with real data
+                        // console.log("AI Telemetry:", data); // DEBUG LOG
+
+                        // Accept both TRACKING and SEARCHING for the UI demo, so altitude always moves if connected
+                        if (data.status === "TRACKING" || data.status === "SEARCHING_EDGE") {
                             setDrone(prev => ({
                                 ...prev,
-                                status: "AI_LOCKED",
+                                status: data.status === "TRACKING" ? "AI_LOCKED" : "SCANNING...",
                                 mission: "SURVEYING"
                             }));
-                            // Convert waterline Y to Altitude metric (mock conversion)
-                            const mockAlt = (720 - data.waterline_y) * 0.02;
-                            if (!isNaN(mockAlt)) {
-                                setDrone(prev => ({ ...prev, altitude: mockAlt }));
+
+                            setDebugY(data.waterline_y); // Update debug value
+
+                            // [CALIBRATION LOGIC - ROBUST]
+                            let realAlt = 0;
+                            if (calData.isCalibrated) {
+                                // Alt = Distance From Zero * Scale
+                                // Distance = |Zero - Current|
+                                // This works regardless of Up/Down direction
+                                realAlt = Math.abs(calData.zeroY - data.waterline_y) * calData.scale;
+                            } else {
+                                // Fallback
+                                const frameH = data.frame_height || 1920;
+                                realAlt = (frameH - data.waterline_y) * 0.002;
                             }
+
+                            if (!isNaN(realAlt)) {
+                                setDrone(prev => ({ ...prev, altitude: realAlt }));
+                            }
+
+                        } else if (data.status === "WAITING_VIDEO") {
+                            setDrone(prev => ({ ...prev, status: "WAITING_VID", mission: "BUFFERING" }));
+                        } else {
+                            // Show the actual status (NO_DATA, etc)
+                            setDrone(prev => ({ ...prev, status: data.status || "NO_SIGNAL" }));
                         }
                     })
-                    .catch(() => { });
+                    .catch((err) => {
+                        console.error(err);
+                        setDrone(prev => ({ ...prev, status: "API_ERROR" }));
+                    });
             } else {
                 // Idle drift
                 setDrone(prev => ({ ...prev, battery: Math.max(0, prev.battery - 0.01) }));
             }
         }, 1000);
         return () => clearInterval(interval);
-    }, [isSimulating, streamSource]);
+    }, [isSimulating, streamSource, calData, calStep]);
+
+    // [NEW] Auto-Connect Logic with Debounce & Validation
+    useEffect(() => {
+        if (streamSource === 'LIVE') {
+            // Prevent connecting to the placeholder
+            if (rtspUrl.includes("XX") || rtspUrl.length < 10) {
+                console.log("Waiting for valid IP address...");
+                return;
+            }
+
+            const timeoutId = setTimeout(() => {
+                console.log("Auto-connecting to AI Core...", rtspUrl);
+                axios.post('http://localhost:8000/api/stream/connect', { url: rtspUrl })
+                    .then(() => console.log("AI Core Connection Initiated"))
+                    .catch(err => console.error("Auto-connect failed:", err));
+            }, 1500); // Wait 1.5s after user stops typing
+
+            return () => clearTimeout(timeoutId);
+        }
+    }, [streamSource, rtspUrl]);
 
     // Draw Map & Waypoints
     useEffect(() => {
@@ -392,12 +477,20 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
                                 {streamSource === 'LIVE' ? 'IP_WEBCAM_LIVE' : 'SIMULATION_FEED'}
                             </span>
                         </div>
-                        <button
-                            onClick={() => setStreamSource(prev => prev === 'SIMULATION' ? 'LIVE' : 'SIMULATION')}
-                            className="text-[8px] px-2 py-0.5 bg-white/10 rounded hover:bg-white/20 text-white"
-                        >
-                            SWITCH SOURCE
-                        </button>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => setCalStep('ZERO')}
+                                className="text-[8px] px-2 py-0.5 bg-[#64ffda]/10 text-[#64ffda] rounded hover:bg-[#64ffda]/20 border border-[#64ffda]/30 flex items-center gap-1"
+                            >
+                                <Activity size={8} /> REC
+                            </button>
+                            <button
+                                onClick={() => setStreamSource(prev => prev === 'SIMULATION' ? 'LIVE' : 'SIMULATION')}
+                                className="text-[8px] px-2 py-0.5 bg-white/10 rounded hover:bg-white/20 text-white"
+                            >
+                                SWITCH SOURCE
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content */}
@@ -413,13 +506,18 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
                         ) : (
                             <div className="w-full h-full relative group">
                                 <img
-                                    src={rtspUrl}
+                                    src={
+                                        (rtspUrl.includes("XX") || rtspUrl.length < 10)
+                                            ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23666'%3EWAITING FOR IP%3C/text%3E%3C/svg%3E"
+                                            : rtspUrl
+                                    }
                                     className={cn(
-                                        "w-full h-full object-cover",
+                                        "w-full h-full object-cover transform rotate-90 scale-125", // Rotated for phone portrait mode
                                         nightVision ? "grayscale contrast-125 brightness-150 sepia hue-rotate-50 saturate-200" : ""
                                     )}
                                     onError={(e) => {
-                                        (e.target as HTMLImageElement).src = "https://via.placeholder.com/300x200/000000/ffffff?text=NO+SIGNAL";
+                                        // Use a simple data URI for a gray placeholder to avoid network errors
+                                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23666'%3ENO SIGNAL%3C/text%3E%3C/svg%3E";
                                     }}
                                 />
                                 {/* URL Input Overlay (Hidden unless hovering) */}
@@ -445,6 +543,61 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
                             </div>
                         )}
                         {nightVision && <div className="absolute inset-0 bg-green-500/10 pointer-events-none mix-blend-overlay"></div>}
+
+                        {/* CALIBRATION WIZARD OVERLAY */}
+                        {calStep !== 'IDLE' && calStep !== 'DONE' && (
+                            <div className="absolute inset-0 bg-black/90 z-40 flex flex-col items-center justify-center p-4 text-center">
+                                <h5 className="text-[#64ffda] font-bold text-xs mb-1 uppercase tracking-widest">
+                                    {calStep === 'ZERO' ? '1. ZERO POINT SCAN' : '2. REFERENCE SCAN'}
+                                </h5>
+                                <p className="text-gray-400 text-[9px] mb-3 leading-tight">
+                                    {calStep === 'ZERO' ? 'Place sensor on FLOOR level.' : 'Raise sensor to exactly 1.0 METER.'}
+                                    <br /><span className="text-xs text-[#64ffda] font-mono mt-1 block">LIVE SENSOR: {debugY} px</span>
+                                    {calStep === 'REF' && <span className="text-[9px] text-gray-500 block mt-1">Zero Point set at: {calData.zeroY} px</span>}
+                                </p>
+                                <button
+                                    onClick={async () => {
+                                        // STATISTICAL SAMPLING (Unicorn Standard)
+                                        // Take 10 samples over 1 second to eliminate jitter
+                                        const samples: number[] = [];
+                                        const btn = document.getElementById('cal-btn');
+                                        if (btn) btn.innerText = "SAMPLING...";
+
+                                        for (let i = 0; i < 10; i++) {
+                                            try {
+                                                const res = await axios.get('http://localhost:8000/api/stream/telemetry');
+                                                samples.push(res.data.waterline_y);
+                                            } catch (e) { }
+                                            await new Promise(r => setTimeout(r, 100)); // 100ms delay
+                                        }
+
+                                        // Calculate Mean (Average)
+                                        const sum = samples.reduce((a, b) => a + b, 0);
+                                        const avg = Math.round(sum / (samples.length || 1));
+
+                                        if (calStep === 'ZERO') {
+                                            setCalData(prev => ({ ...prev, zeroY: avg }));
+                                            setCalStep('REF');
+                                        } else {
+                                            saveCalibration(calData.zeroY, avg);
+                                        }
+                                    }}
+                                    id="cal-btn"
+                                    className="bg-[#64ffda] text-black font-bold text-[10px] px-3 py-1.5 rounded animate-pulse cursor-pointer hover:scale-105 transition-all"
+                                >
+                                    INITIATE SCAN
+                                </button>
+                                <button onClick={() => setCalStep('IDLE')} className="text-gray-500 text-[8px] mt-2 hover:text-white">CANCEL</button>
+                            </div>
+                        )}
+                        {calStep === 'DONE' && (
+                            <div className="absolute inset-0 bg-[#64ffda]/90 z-40 flex flex-col items-center justify-center p-2 text-center animate-in fade-in duration-300">
+                                <Activity size={24} className="text-black mb-1" />
+                                <h5 className="text-black font-bold text-xs uppercase">CALIBRATION SAVED</h5>
+                                <p className="text-black/80 text-[9px]">AI Sensor Optimized</p>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </div>

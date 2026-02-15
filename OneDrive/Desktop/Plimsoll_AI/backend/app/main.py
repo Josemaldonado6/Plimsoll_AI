@@ -22,7 +22,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import endpoints, drone, quote, stream
 
-app = FastAPI(title="Plimsoll AI", version="1.0.0")
+app = FastAPI(title="Plimsoll AI", version="1.0.1")
+print("[SYSTEM] Backend Reloaded - Version 1.0.1")
 
 app.add_middleware(
     CORSMiddleware,

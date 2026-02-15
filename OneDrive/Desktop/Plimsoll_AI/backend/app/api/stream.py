@@ -20,10 +20,10 @@ async def connect_stream(config: StreamConfig):
     streamer.source = config.url
     streamer.start()
     
-    if streamer.status.startswith("ERROR"):
-        raise HTTPException(status_code=400, detail=streamer.status)
+    # Don't check status immediately, as it connects in background.
+    # Frontend will poll /telemetry to see "CONNECTING..." -> "STREAMING"
         
-    return {"status": "success", "message": f"Connected to {config.url}", "state": streamer.status}
+    return {"status": "success", "message": f"Connection initiated to {config.url}", "state": "CONNECTING"}
 
 @router.post("/disconnect")
 async def disconnect_stream():
@@ -45,7 +45,15 @@ async def get_live_telemetry():
     """
     Returns the latest AI analysis from the live stream.
     """
-    if streamer.status != "STREAMING" and streamer.status != "CONNECTED":
-        return {"status": "NO_SIGNAL", "waterline_y": 0, "message": "Stream offline"}
-    
-    return surveyor.get_live_readout() or {"status": "NO_DATA"}
+    try:
+        if streamer.status != "STREAMING" and streamer.status != "CONNECTED":
+            # If we are CONNECTING, tell the frontend
+            if streamer.status == "CONNECTING...":
+                return {"status": "CONNECTING...", "waterline_y": 0, "message": "Establishing Link..."}
+            return {"status": "NO_SIGNAL", "waterline_y": 0, "message": "Stream offline"}
+        
+        return surveyor.get_live_readout() or {"status": "NO_DATA"}
+    except Exception as e:
+        print(f"[API] Telemetry Error: {e}")
+        # Return a safe fallback so the UI doesn't crash
+        return {"status": "SERVER_ERROR", "waterline_y": 0, "message": "Internal Telemetry Error"}

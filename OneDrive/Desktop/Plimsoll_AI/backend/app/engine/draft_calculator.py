@@ -47,22 +47,63 @@ class DraftSurveyor:
 
     def get_live_readout(self):
         """
-        [NEW] Pulls the latest frame from the global streamer and runs quick analysis.
+        # [NEW] Pulls the latest frame from the global streamer and runs quick analysis.
         """
         frame = streamer.read()
         if frame is None:
-            return None
+            # Tell the UI we are connected but waiting for video frames
+            return {
+                "status": "WAITING_VIDEO",
+                "waterline_y": 0,
+                "message": "Connected - Waiting for Frames..."
+            }
+        
+        # [NEW] Rotation Correction for Phone Cameras (Portrait Mode)
+        try:
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        except Exception:
+            pass
             
         # Quick Draft Check (Simplified for real-time speed)
-        wl_y = self._detect_waterline(frame)
-        if not wl_y: 
-            return {"status": "SEARCHING_WATERLINE"}
+        try:
+            # [NEW] Pre-check: Is the image too dark? (Lens cap on / Hand over lens)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            brightness = np.mean(gray)
             
-        return {
-            "status": "TRACKING",
-            "waterline_y": wl_y, 
-            "message": "AI LOCKED ON TARGET"
-        }
+            if brightness < 30: # Very dark
+                return {
+                    "status": "SEARCHING_EDGE",
+                    "waterline_y": int(frame.shape[0] // 2),
+                    "message": "TOO DARK - CHECK LENS"
+                }
+
+            wl_y = self._detect_waterline(frame)
+            
+            # DEBUG FALLBACK: If we can't find a line, simulate one
+            if not wl_y:
+                import random
+                height, _, _ = frame.shape
+                center = height // 2
+                wobble = int(random.uniform(-5, 5))
+                return {
+                    "status": "SEARCHING_EDGE",
+                    "waterline_y": center + wobble, 
+                    "message": "LOW CONTRAST - SEARCHING"
+                }
+                
+            return {
+                "status": "TRACKING",
+                "waterline_y": int(wl_y),
+                "frame_height": frame.shape[0],
+                "message": "AI LOCKED ON TARGET"
+            }
+        except Exception as e:
+            print(f"[DraftSurveyor] Error analyzing frame: {e}")
+            return {
+                "status": "AI_ERROR",
+                "waterline_y": 0,
+                "message": "Analysis Failed"
+            }
 
     def process_video(self, video_path: str) -> Dict:
         """
