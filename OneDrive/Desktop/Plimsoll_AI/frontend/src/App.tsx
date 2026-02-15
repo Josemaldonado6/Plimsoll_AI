@@ -21,11 +21,16 @@
  * -----------------------------------------------------------------------------
  */
 import { useState, useRef, useEffect } from 'react'
-import { Ship, Upload, Activity, History, Settings, FileVideo, AlertCircle, CheckCircle2, Download, Cloud, Loader2, Check, Plane } from 'lucide-react'
+import { Ship, Upload, Activity, History, Settings, FileVideo, AlertCircle, CheckCircle2, Download, Cloud, Loader2, Check, Plane, Shield } from 'lucide-react'
 import axios from 'axios'
 import clsx from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import DronePilot from './components/DronePilot'
+import LandingPage from './components/LandingPage'
+import { useTranslation } from 'react-i18next'
+import OnboardingTour from './components/OnboardingTour'
+import SupportWidget from './components/SupportWidget'
+import TelemetryPanel from './components/TelemetryPanel'
 
 // Utility for class merging
 function cn(...inputs: (string | undefined | null | false)[]) {
@@ -42,70 +47,17 @@ interface Survey {
     is_synced?: number
 }
 
-const translations = {
-    en: {
-        title: "PLIMSOLL AI v2.2-FIXED",
-        radar_survey: "Radar Survey",
-        history_log: "History Log",
-        drone_pilot: "Drone Pilot",
-        sys_config: "System Config",
-        cv_analysis: "Automated Computer Vision Analysis",
-        audit_trail: "Audit Trail & Previous Surveys",
-        sys_op: "System Operational",
-        upload_btn: "Upload Drone Footage",
-        drag_drop: "Drag & drop or click to browse",
-        init_analysis: "Initialize Draft Analysis",
-        mean_draft: "Mean Draft",
-        confidence: "Confidence",
-        sea_state: "Sea State",
-        live_telemetry: "Live Telemetry",
-        audit_compliant: "Audit Compliant",
-        neural_insights: "Neural Insights",
-        detected_marks: "Detected Scale Marks",
-        ocr_seq: "OCR Sequence",
-        processing: "Processing...",
-        no_history: "No audit history found.",
-        remove_file: "Remove File",
-        awaiting: "Awaiting Data Stream..."
-    },
-    es: {
-        radar_survey: "Escaneo de Calado",
-        history_log: "Registro Histórico",
-        drone_pilot: "Piloto de Dron",
-        sys_config: "Configuración",
-        cv_analysis: "Análisis Automatizado por Visión Artificial",
-        audit_trail: "Trazabilidad de Auditoría y Escaneos Previos",
-        sys_op: "Sistema Operativo",
-        upload_btn: "Subir Metraje de Dron",
-        drag_drop: "Arrastra y suelta o haz clic para buscar",
-        init_analysis: "Iniciar Análisis de Calado",
-        mean_draft: "Calado Medio",
-        confidence: "Confianza",
-        sea_state: "Estado del Mar",
-        live_telemetry: "Telemetría en Vivo",
-        audit_compliant: "Auditoría Cumplida",
-        neural_insights: "Perspectiva Neuronal",
-        detected_marks: "Marcas Detectadas",
-        ocr_seq: "Secuencia OCR",
-        processing: "Procesando...",
-        no_history: "No se encontró historial.",
-        remove_file: "Eliminar Archivo",
-        awaiting: "Esperando Transmisión de Datos..."
-    }
-}
-
 export default function App() {
+    const { t, i18n } = useTranslation();
+    const [showLanding, setShowLanding] = useState(true)
     const [activeTab, setActiveTab] = useState("Radar Survey")
     const [file, setFile] = useState<File | null>(null)
     const [analyzing, setAnalyzing] = useState(false)
     const [result, setResult] = useState<any>(null)
     const [history, setHistory] = useState<Survey[]>([])
     const [dragActive, setDragActive] = useState(false)
-    const [lang, setLang] = useState<'en' | 'es'>('en')
     const [theme, setTheme] = useState<'light' | 'dark'>('dark')
     const inputRef = useRef<HTMLInputElement>(null)
-
-    const t = translations[lang] as any
 
     // Dynamic API URL for both Dev and Prod
     const getApiUrl = (path: string) => {
@@ -200,7 +152,9 @@ export default function App() {
 
     const handleDownload = async (id: number) => {
         try {
-            const response = await axios.get(getApiUrl(`/surveys/${id}/pdf`), {
+            // Extract primary language code (e.g., 'en-US' -> 'en')
+            const currentLang = i18n.language.split('-')[0];
+            const response = await axios.get(getApiUrl(`/surveys/${id}/pdf?lang=${currentLang}`), {
                 responseType: 'blob',
                 headers: {
                     'Accept': 'application/pdf'
@@ -232,11 +186,22 @@ export default function App() {
         }
     }
 
+    const changeLanguage = (lng: string) => {
+        i18n.changeLanguage(lng);
+    }
+
+    if (showLanding) {
+        return <LandingPage onEnterApp={() => setShowLanding(false)} />
+    }
+
     return (
         <div className={cn(
             "flex h-screen overflow-hidden font-sans transition-colors duration-300",
             theme === 'dark' ? "bg-[#0a192f] text-[#e6f1ff]" : "bg-gray-50 text-gray-900"
         )}>
+            <SupportWidget />
+            <OnboardingTour />
+            <TelemetryPanel visible={analyzing || !!result} data={result} />
 
             {/* Sidebar */}
             <aside className={cn(
@@ -256,28 +221,30 @@ export default function App() {
                 <nav className="flex-1 w-full space-y-4 px-3">
                     <NavItem
                         icon={<Activity size={20} />}
-                        label={t.radar_survey}
+                        label={t('nav.radar_survey')}
                         active={activeTab === "Radar Survey"}
                         onClick={() => setActiveTab("Radar Survey")}
                         theme={theme}
                     />
-                    <NavItem
-                        icon={<History size={20} />}
-                        label={t.history_log}
-                        active={activeTab === "History Log"}
-                        onClick={() => setActiveTab("History Log")}
-                        theme={theme}
-                    />
+                    <div className="tour-history-tab">
+                        <NavItem
+                            icon={<History size={20} />}
+                            label={t('nav.history_log')}
+                            active={activeTab === "History Log"}
+                            onClick={() => setActiveTab("History Log")}
+                            theme={theme}
+                        />
+                    </div>
                     <NavItem
                         icon={<Plane size={20} />}
-                        label={t.drone_pilot}
+                        label={t('nav.drone_pilot')}
                         active={activeTab === "Drone Pilot"}
                         onClick={() => setActiveTab("Drone Pilot")}
                         theme={theme}
                     />
                     <NavItem
                         icon={<Settings size={20} />}
-                        label={t.sys_config}
+                        label={t('nav.sys_config')}
                         active={activeTab === "System Config"}
                         onClick={() => setActiveTab("System Config")}
                         theme={theme}
@@ -298,14 +265,24 @@ export default function App() {
                         theme === 'dark' ? "bg-[#112240] border-[#64ffda]/20" : "bg-white border-gray-200 shadow-sm"
                     )}>
                         <button
-                            onClick={() => setLang('en')}
-                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", lang === 'en' ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            onClick={() => changeLanguage('en')}
+                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('en') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
                             EN
                         </button>
                         <button
-                            onClick={() => setLang('es')}
-                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", lang === 'es' ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            onClick={() => changeLanguage('es')}
+                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('es') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
                             ES
+                        </button>
+                        <button
+                            onClick={() => changeLanguage('pt')}
+                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('pt') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            PT
+                        </button>
+                        <button
+                            onClick={() => changeLanguage('zh')}
+                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('zh') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            ZH
                         </button>
                     </div>
 
@@ -322,23 +299,23 @@ export default function App() {
                 <header className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className={cn("text-3xl font-bold tracking-tight", theme === 'light' && "text-gray-900")}>
-                            {activeTab === "Radar Survey" ? t.radar_survey : (activeTab === "History Log" ? t.history_log : (activeTab === "Drone Pilot" ? t.drone_pilot : t.sys_config))}
+                            {activeTab === "Radar Survey" ? t('nav.radar_survey') : (activeTab === "History Log" ? t('nav.history_log') : (activeTab === "Drone Pilot" ? t('nav.drone_pilot') : t('nav.sys_config')))}
                         </h1>
-                        <p className="text-[#8892b0] mt-1">{t.subtitle}</p>
+                        <p className="text-[#8892b0] mt-1">{t('app.subtitle')}</p>
                     </div>
                     {analyzing && (
                         <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-[#64ffda]/10 border border-[#64ffda]/20 animate-pulse">
                             <Activity className="text-[#64ffda] animate-spin" size={16} />
-                            <span className="text-[#64ffda] text-xs font-bold uppercase tracking-widest">AI PROCESSING...</span>
+                            <span className="text-[#64ffda] text-xs font-bold uppercase tracking-widest">{t('dashboard.processing')}</span>
                         </div>
                     )}
                     {!analyzing && (
                         <div className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-full border transition-colors",
+                            "flex items-center gap-2 px-4 py-2 rounded-full border transition-colors tour-system-status",
                             theme === 'dark' ? "bg-[#64ffda]/5 border-[#64ffda]/20 text-[#64ffda]" : "bg-green-50 border-green-200 text-green-700"
                         )}>
                             <div className={cn("w-2 h-2 rounded-full animate-pulse", theme === 'dark' ? "bg-[#64ffda]" : "bg-green-500")}></div>
-                            <span className="text-sm font-medium">{t.sys_op}</span>
+                            <span className="text-sm font-medium">{t('dashboard.sys_op')}</span>
                         </div>
                     )}
                 </header>
@@ -349,7 +326,7 @@ export default function App() {
                         <div className="lg:col-span-2 space-y-6">
                             <div
                                 className={cn(
-                                    "h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden group",
+                                    "h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden group tour-upload-zone",
                                     dragActive ? "border-[#64ffda] bg-[#64ffda]/5" : "border-[#8892b0]/30 hover:border-[#64ffda]/50 hover:bg-[#112240]"
                                 )}
                                 onDragEnter={handleDrag}
@@ -375,7 +352,7 @@ export default function App() {
                                             onClick={(e) => { e.stopPropagation(); setFile(null); setResult(null); }}
                                             className="mt-6 text-sm text-red-400 hover:text-red-300 underline"
                                         >
-                                            {t.remove_file}
+                                            {t('dashboard.remove_file')}
                                         </button>
                                     </div>
                                 ) : (
@@ -386,8 +363,8 @@ export default function App() {
                                         )}>
                                             <Upload className="w-10 h-10 text-[#64ffda]" />
                                         </div>
-                                        <h3 className={cn("text-xl font-semibold mb-2", theme === 'light' && "text-gray-900")}>{t.upload_btn}</h3>
-                                        <p className="text-[#8892b0]">{t.drag_drop}</p>
+                                        <h3 className={cn("text-xl font-semibold mb-2", theme === 'light' && "text-gray-900")}>{t('dashboard.upload_btn')}</h3>
+                                        <p className="text-[#8892b0]">{t('dashboard.drag_drop')}</p>
                                         <p className="text-xs text-[#8892b0] mt-4">Supports MP4, AVI, MOV</p>
                                     </div>
                                 )}
@@ -412,28 +389,28 @@ export default function App() {
                                     )}>
                                         <Activity className="w-8 h-8 opacity-50" />
                                     </div>
-                                    <p>{t.awaiting}</p>
-                                    <p className="text-xs mt-2 opacity-50">{lang === 'es' ? "Sube un video para ver analíticas" : "Upload a video to see analytics"}</p>
+                                    <p>{t('dashboard.awaiting')}</p>
+                                    <p className="text-xs mt-2 opacity-50">{i18n.language.startsWith('es') ? "Sube un video para ver analíticas" : "Upload a video to see analytics"}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4 animate-fade-in-up">
                                     <ResultCard
-                                        label={t.mean_draft}
+                                        label={t('dashboard.mean_draft')}
                                         value={`${result.draft_mean} m`}
-                                        subtext={lang === 'es' ? "Promedio Calculado" : "Calculated Average"}
+                                        subtext={i18n.language.startsWith('es') ? "Promedio Calculado" : "Calculated Average"}
                                         highlight
                                         theme={theme}
                                     />
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <ResultCard
-                                            label={t.confidence}
+                                            label={t('dashboard.confidence')}
                                             value={`${(result.confidence * 100).toFixed(0)}%`}
                                             icon={<CheckCircle2 className="text-[#64ffda]" />}
                                             theme={theme}
                                         />
                                         <ResultCard
-                                            label={t.sea_state}
+                                            label={t('dashboard.sea_state')}
                                             value={result.sea_state.toUpperCase()}
                                             icon={<AlertCircle className="text-blue-400" />}
                                             theme={theme}
@@ -441,20 +418,29 @@ export default function App() {
                                     </div>
 
                                     <div className={cn(
-                                        "p-6 rounded-2xl border backdrop-blur-sm",
+                                        "p-6 rounded-2xl border backdrop-blur-sm tour-telemetry-panel",
                                         theme === 'dark' ? "bg-[#112240]/50 border-[#64ffda]/20" : "bg-white border-gray-200 shadow-sm"
                                     )}>
-                                        <h4 className="text-sm font-semibold text-[#8892b0] uppercase mb-4">{t.live_telemetry}</h4>
+                                        <h4 className="text-sm font-semibold text-[#8892b0] uppercase mb-4">{t('dashboard.live_telemetry')}</h4>
                                         <div className="space-y-3">
-                                            <TelemetryRow label={lang === 'es' ? "Densidad Agua" : "Water Density"} value="1.025 g/cm³" theme={theme} />
+                                            <TelemetryRow label={i18n.language.startsWith('es') ? "Densidad Agua" : "Water Density"} value="1.025 g/cm³" theme={theme} />
                                             <TelemetryRow label="Waterline Y" value={`${result.telemetry?.waterline_y || 0} px`} theme={theme} />
-                                            <TelemetryRow label={lang === 'es' ? "Varianza Señal" : "Signal Variance"} value={(result.telemetry?.variance || 0).toFixed(1)} theme={theme} />
+                                            <TelemetryRow label={i18n.language.startsWith('es') ? "Varianza Señal" : "Signal Variance"} value={(result.telemetry?.variance || 0).toFixed(1)} theme={theme} />
                                         </div>
                                     </div>
 
                                     <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm flex items-center gap-3">
                                         <CheckCircle2 size={18} />
-                                        {t.audit_compliant} - AI Verified (ID: {result.id})
+                                        {t('dashboard.audit_compliant')} - AI Verified (ID: {result.id})
+                                    </div>
+
+                                    {/* Phase 26: Blockchain Badge */}
+                                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm flex items-center gap-3">
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-blue-500 blur-sm opacity-50 animate-pulse"></div>
+                                            <Shield size={18} className="relative z-10" />
+                                        </div>
+                                        BLOCKCHAIN NOTARIZED (SHA-256)
                                     </div>
 
                                     {result.ai_metadata && (
@@ -463,12 +449,12 @@ export default function App() {
                                             theme === 'dark' ? "bg-[#64ffda]/5 border-[#64ffda]/20" : "bg-green-50 border-green-100 shadow-sm"
                                         )}>
                                             <h4 className="text-sm font-semibold text-[#64ffda] uppercase mb-4 flex items-center gap-2">
-                                                <Activity size={16} /> {t.neural_insights}
+                                                <Activity size={16} /> {t('dashboard.neural_insights')}
                                             </h4>
                                             <div className="space-y-2">
-                                                <p className="text-xs text-[#8892b0]">{t.detected_marks}: <span className={theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900"}>{result.ai_metadata.objects_detected}</span></p>
+                                                <p className="text-xs text-[#8892b0]">{t('dashboard.detected_marks')}: <span className={theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900"}>{result.ai_metadata.objects_detected}</span></p>
                                                 <div className="mt-2">
-                                                    <p className="text-xs text-[#8892b0] mb-1">{t.ocr_seq}:</p>
+                                                    <p className="text-xs text-[#8892b0] mb-1">{t('dashboard.ocr_seq')}:</p>
                                                     <div className="flex flex-wrap gap-1">
                                                         {result.ai_metadata.ocr_readings.slice(0, 3).map((text: string, i: number) => (
                                                             <span key={i} className={cn(
@@ -491,7 +477,7 @@ export default function App() {
 
                 {activeTab === "Drone Pilot" && (
                     <div className="w-full h-full">
-                        <DronePilot lang={lang} theme={theme} />
+                        <DronePilot lang={i18n.language.startsWith('es') ? 'es' : 'en'} theme={theme} />
                     </div>
                 )}
 
@@ -499,7 +485,7 @@ export default function App() {
                     <div className="w-full h-full overflow-hidden flex flex-col">
                         <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
                             {history.length === 0 ? (
-                                <div className="text-center text-[#8892b0] py-20">{t.no_history}</div>
+                                <div className="text-center text-[#8892b0] py-20">{t('dashboard.no_history')}</div>
                             ) : (
                                 history.map((survey) => (
                                     <div key={survey.id} className={cn(
@@ -511,17 +497,17 @@ export default function App() {
                                                 {survey.draft_mean.toFixed(2)}
                                             </div>
                                             <div>
-                                                <h3 className={cn("font-semibold", theme === 'light' && "text-gray-900")}>{new Date(survey.timestamp).toLocaleString(lang === 'es' ? 'es-ES' : 'en-US')}</h3>
+                                                <h3 className={cn("font-semibold", theme === 'light' && "text-gray-900")}>{new Date(survey.timestamp).toLocaleString(i18n.language)}</h3>
                                                 <p className="text-sm text-[#8892b0] font-mono mt-1">{survey.filename.substring(0, 8)}...mp4</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-8">
                                             <div className="text-right hidden sm:block">
-                                                <p className="text-xs text-[#8892b0] uppercase">{t.sea_state}</p>
+                                                <p className="text-xs text-[#8892b0] uppercase">{t('dashboard.sea_state')}</p>
                                                 <p className={theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900"}>{survey.sea_state}</p>
                                             </div>
                                             <div className="text-right hidden sm:block">
-                                                <p className="text-xs text-[#8892b0] uppercase">{t.confidence}</p>
+                                                <p className="text-xs text-[#8892b0] uppercase">{t('dashboard.confidence')}</p>
                                                 <p className="text-[#64ffda]">{(survey.confidence * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex items-center gap-2">

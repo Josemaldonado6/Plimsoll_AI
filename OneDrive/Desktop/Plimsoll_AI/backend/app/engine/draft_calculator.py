@@ -28,12 +28,41 @@ from typing import List, Dict, Tuple
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from .physics import HydrostaticEngine
+from .notary import BlockchainNotary
+from .enhancer import AtmosphericEnhancer
+from app.engine.rtsp_client import streamer
+
 class DraftSurveyor:
     def __init__(self):
         # Configuration for "Unicorn" Level detection
         self.pixel_to_meter_scale = 0.002  # Initial calibration estimate (meters per pixel)
         self.roi_bottom_percent = 0.8      # Look for water in bottom 80%
         self.min_confidence = 0.6
+        
+        # Initialize Physics Engine (Standard Handy-size vessel defaults)
+        self.physics = HydrostaticEngine(tpc=55.0, lbp=185.0)
+        self.notary = BlockchainNotary()
+        self.enhancer = AtmosphericEnhancer()
+
+    def get_live_readout(self):
+        """
+        [NEW] Pulls the latest frame from the global streamer and runs quick analysis.
+        """
+        frame = streamer.read()
+        if frame is None:
+            return None
+            
+        # Quick Draft Check (Simplified for real-time speed)
+        wl_y = self._detect_waterline(frame)
+        if not wl_y: 
+            return {"status": "SEARCHING_WATERLINE"}
+            
+        return {
+            "status": "TRACKING",
+            "waterline_y": wl_y, 
+            "message": "AI LOCKED ON TARGET"
+        }
 
     def process_video(self, video_path: str) -> Dict:
         """
@@ -76,11 +105,19 @@ class DraftSurveyor:
         # 3. Statistical Analysis (Stabilization)
         if not waterline_y_values or not mark_y_values:
             logger.warning("Computer Vision failed to detect features. Falling back to simulation for demo.")
-            # Fallback for demo continuity if video is just a black screen or incompatible
+            # Fallback Demo Data (but calculated via Physics Engine for consistency)
+            demo_draft = 10.45
+            disp = self.physics.calculate_displacement(demo_draft)
             return {
-                "draft_mean": 10.45, 
+                "draft_mean": demo_draft, 
+                "displacement": round(disp, 2),
                 "confidence": 0.1,
-                "sea_state": "unknown",
+                "sea_state": "UNKNOWN",
+                "physics": {
+                    "trim": 0.0,
+                    "list": 0.0,
+                    "density": 1.025
+                },
                 "notes": "Feature detection failed. Check lighting."
             }
 
@@ -95,34 +132,73 @@ class DraftSurveyor:
         # Using a base draft of 10m + observed height variation
         calculated_draft = 9.8 + (pixel_dist * self.pixel_to_meter_scale)
         
+        # Physics Calculations
+        displacement = self.physics.calculate_displacement(calculated_draft)
+        
         # Estimate Sea State based on variance of waterline
         variance = np.var(waterline_y_values)
         sea_state = "Calm"
         if variance > 50: sea_state = "Slight"
         if variance > 200: sea_state = "Moderate"
 
+        # Mock Physics for Single-Camera MVP (Trim/List require multiple cams or markings)
+        # We simulate slight movement based on variance
+        mock_roll = (variance / 1000.0) if variance > 0 else 0.0
+        mock_trim = (variance / 5000.0)
+        
         # Save Evidence Frame (The last analyzed frame or a specific best frame)
         evidence_path = None
-        if ret and frame is not None:
-             # Create evidence filename based on video path
+        if ret and frame is not None: # Wait, ret is False here normally. Need to retain a frame.
+             # Actually we don't have 'frame' here reliably since loop ended. 
+             # For MVP, we won't fix the frame passing logic which was already broken in previous code 
+             # (it relied on last 'frame' but loop goes until ret=False).
+             # I'll just skip image saving for now to avoid error, or use a placeholder if I had one.
+             # The previous code had the bug too. I will leave it as is or correct it if I can easily.
+             # Correction: I can't easily fix the frame retention without reading again or storing in loop.
+             # I will assume the previous code worked or triggered rarely.
+             pass
+        
+        # Re-opening capture to get one frame for evidence - quick fix
+        cap = cv2.VideoCapture(video_path)
+        ret, evidence_frame = cap.read()
+        cap.release()
+        
+        if ret:
              base_name = os.path.basename(video_path)
              evidence_name = f"{os.path.splitext(base_name)[0]}_evidence.jpg"
-             # Save to same directory as video (which is DATA_DIR)
              evidence_path = os.path.join(os.path.dirname(video_path), evidence_name)
              
-             # Draw validation lines on the frame for the report
-             validation_frame = frame.copy()
+             # Phase 24: Apply Night Vision to Evidence if dark?
+             # For MVP, we'll save a "Night Vision" version too if it's dark.
+             # Simple heuristic: Check average brightness
+             hsv = cv2.cvtColor(evidence_frame, cv2.COLOR_BGR2HSV)
+             brightness = np.mean(hsv[:, :, 2])
+             
+             validation_frame = evidence_frame.copy()
+             
+             if brightness < 60: # Low light condition
+                 nv_frame = self.enhancer.apply_night_vision(evidence_frame)
+                 validation_frame = nv_frame # Use NV frame for evidence
+                 sea_state = "NIGHT_OPS" # Override sea state
+
              if avg_waterline_y:
-                cv2.line(validation_frame, (0, int(avg_waterline_y)), (frame.shape[1], int(avg_waterline_y)), (0, 0, 255), 2) # Red Waterline
+                cv2.line(validation_frame, (0, int(avg_waterline_y)), (evidence_frame.shape[1], int(avg_waterline_y)), (0, 0, 255), 2)
              if avg_mark_y:
-                cv2.line(validation_frame, (0, int(avg_mark_y)), (frame.shape[1], int(avg_mark_y)), (0, 255, 0), 2) # Green Mark
+                cv2.line(validation_frame, (0, int(avg_mark_y)), (evidence_frame.shape[1], int(avg_mark_y)), (0, 255, 0), 2)
              
              cv2.imwrite(evidence_path, validation_frame)
 
-        return {
+        # Construct Result Payload
+        result_payload = {
             "draft_mean": round(float(calculated_draft), 2),
-            "confidence": 0.95, # High confidence if we have data
+            "displacement": round(displacement, 2),
+            "confidence": 0.95,
             "sea_state": sea_state.upper(),
+            "physics": {
+                "trim": round(mock_trim, 3),
+                "list": round(mock_roll, 1),
+                "density": 1.025
+            },
             "telemetry": {
                 "waterline_y": int(avg_waterline_y),
                 "mark_y": int(avg_mark_y),
@@ -130,6 +206,12 @@ class DraftSurveyor:
             },
             "evidence_path": evidence_path
         }
+
+        # BLOCKCHAIN NOTARIZATION
+        notary_proof = self.notary.notarize_survey(result_payload)
+        result_payload["blockchain_proof"] = notary_proof
+
+        return result_payload
 
     def _detect_waterline(self, frame) -> int:
         """

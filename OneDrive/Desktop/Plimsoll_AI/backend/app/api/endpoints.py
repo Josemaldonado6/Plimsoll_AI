@@ -91,7 +91,7 @@ async def analyze_draft(video: UploadFile = File(...), db: AsyncSession = Depend
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/surveys/{survey_id}/pdf")
-async def generate_pdf(survey_id: int, db: AsyncSession = Depends(get_db)):
+async def generate_pdf(survey_id: int, lang: str = "en", db: AsyncSession = Depends(get_db)):
     # Fetch survey from DB
     result = await db.execute(select(Survey).where(Survey.id == survey_id))
     survey = result.scalars().first()
@@ -100,7 +100,7 @@ async def generate_pdf(survey_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Survey not found")
 
     # Generate PDF
-    print(f"[PDF DEBUG] Starting generation for ID: {survey_id}", flush=True)
+    print(f"[PDF DEBUG] Starting generation for ID: {survey_id} | Lang: {lang}", flush=True)
     pdf_gen = PDFGenerator(output_dir=DATA_DIR)
     
     # Robust date formatting
@@ -126,7 +126,8 @@ async def generate_pdf(survey_id: int, db: AsyncSession = Depends(get_db)):
     try:
         print(f"[PDF DEBUG] Survey Data: {survey_data}", flush=True)
         print(f"[PDF DEBUG] Evidence Path: {survey.evidence_path}", flush=True)
-        pdf_path = pdf_gen.generate_report(survey_data, survey.evidence_path)
+        # Pass lang to generator
+        pdf_path = pdf_gen.generate_report(survey_data, survey.evidence_path, lang=lang)
         print(f"[PDF DEBUG] PDF Generated at: {pdf_path}", flush=True)
         
         if not os.path.exists(pdf_path):

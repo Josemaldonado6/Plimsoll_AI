@@ -20,7 +20,7 @@
 # -----------------------------------------------------------------------------
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import endpoints, drone
+from app.api import endpoints, drone, quote, stream
 
 app = FastAPI(title="Plimsoll AI", version="1.0.0")
 
@@ -34,6 +34,8 @@ app.add_middleware(
 
 app.include_router(endpoints.router)
 app.include_router(drone.router, prefix="/api/v1")
+app.include_router(quote.router, prefix="/api/quote", tags=["Sales Automation"])
+app.include_router(stream.router, prefix="/api/stream", tags=["Live Stream"])
 
 @app.get("/")
 def read_root():
