@@ -1,0 +1,13 @@
+    try {
+      // In production (Docker), Nginx proxies /analyze to backend
+      // In dev, we used full URL. Let's make it relative so it works in both if configured right, 
+      // or we can fallback.
+      // For the Docker Nginx setup, '/analyze' will be proxied to backend:8000/analyze
+      const endpoint = "/analyze" 
+      
+      const response = await axios.post(endpoint, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+      setResult(response.data)
