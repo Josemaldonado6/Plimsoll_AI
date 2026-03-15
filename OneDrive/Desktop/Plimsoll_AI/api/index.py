@@ -32,7 +32,10 @@ from app.db.models import Survey
 # EXCLUIDOS del cloud (requieren hardware físico o librerías Edge-only):
 #   - ballast  → BallastPLCBridge usa pymodbus (PLC físico en el barco)
 #   - endpoints → AIDraftSurveyor usa OpenVINO INT8 (NPU en la tablet)
-from app.api import auth, drone, quote, omniscient
+from app.api.auth import router as auth_router
+from app.api.drone import router as drone_router
+from app.api.quote import router as quote_router
+from app.api.omniscient import router as omniscient_router
 
 
 @asynccontextmanager
@@ -60,10 +63,10 @@ app.add_middleware(
 # ------------------------------------------------------------------
 # Routers cloud-safe
 # ------------------------------------------------------------------
-app.include_router(auth.router,       prefix="/api")
-app.include_router(drone.router,      prefix="/api")
-app.include_router(quote.router,      prefix="/api/quote", tags=["Sales Automation"])
-app.include_router(omniscient.router, prefix="/api",       tags=["OSINT"])
+app.include_router(auth_router,       prefix="/api")
+app.include_router(drone_router,      prefix="/api")
+app.include_router(quote_router,      prefix="/api/quote", tags=["Sales Automation"])
+app.include_router(omniscient_router, prefix="/api",       tags=["OSINT"])
 
 
 # ------------------------------------------------------------------
