@@ -35,3 +35,14 @@ class Survey(Base):
     variance = Column(Float)
     evidence_path = Column(String, nullable=True)
     is_synced = Column(Integer, default=0) # 0=False, 1=True (SQLite boolean usually integer)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    full_name = Column(String)
+    tier = Column(String, default="Standard")
+    is_active = Column(Integer, default=1)
+    last_login = Column(DateTime, nullable=True)
