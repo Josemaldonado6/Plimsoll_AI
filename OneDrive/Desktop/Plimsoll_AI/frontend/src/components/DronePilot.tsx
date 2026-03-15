@@ -21,14 +21,21 @@
  * -----------------------------------------------------------------------------
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { Plane, Navigation, Battery, Activity, Compass, Play, ShieldAlert, Map as MapIcon, Wifi, Plus, Trash2, Send } from 'lucide-react';
+import { Plane, Navigation, Battery, Activity, Compass, Play, ShieldAlert, Wifi, Plus, Trash2, HardDrive } from 'lucide-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
     return twMerge(clsx(inputs))
 };
+
+// Utility for API URL
+const getApiUrl = (path: string) => {
+    const isDev = window.location.port === "5173"
+    return isDev ? `http://localhost:8000${path}` : path
+}
 
 interface DroneState {
     status: string;
@@ -45,49 +52,13 @@ interface Waypoint {
     y: number;
 }
 
-const droneTranslations: any = {
-    en: {
-        status: "Drone Status",
-        link_active: "Link Active",
-        no_signal: "No Signal",
-        altitude: "Altitude",
-        battery: "Battery",
-        mode: "Mode",
-        pitch: "Pitch",
-        takeoff: "Takeoff",
-        auto_survey: "Start Mission",
-        land: "Return Home",
-        nav_logs: "Navigation Logs",
-        live: "LIVE 4K 60FPS",
-        dynamic_map: "Tactical Mission Planner",
-        satellite_view: "Tap to add waypoints",
-        clear: "Clear Path"
-    },
-    es: {
-        status: "Estado del Dron",
-        link_active: "Enlace Activo",
-        no_signal: "Sin Señal",
-        altitude: "Altitud",
-        battery: "Batería",
-        mode: "Modo",
-        pitch: "Inclinación",
-        takeoff: "Despegar",
-        auto_survey: "Iniciar Misión",
-        land: "Retorno a Casa",
-        nav_logs: "Registros de Navegación",
-        live: "EN VIVO 4K 60FPS",
-        dynamic_map: "Planificador Táctico",
-        satellite_view: "Toca para agregar puntos",
-        clear: "Borrar Ruta"
-    }
-}
 
 interface DronePilotProps {
-    lang: 'en' | 'es';
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'midnight';
 }
 
-export default function DronePilot({ lang, theme }: DronePilotProps) {
+export default function DronePilot({ theme }: DronePilotProps) {
+    const { t } = useTranslation();
     const [drone, setDrone] = useState<DroneState>({
         status: "READY",
         altitude: 0,
@@ -96,133 +67,20 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
         gimbal_pitch: -90,
         mission: "IDLE"
     });
-    const [connected, setConnected] = useState(true);
+    const [connected] = useState(true);
     const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
     const [isSimulating, setIsSimulating] = useState(false);
-    const [streamSource, setStreamSource] = useState<'SIMULATION' | 'LIVE'>('SIMULATION');
-    const [rtspUrl, setRtspUrl] = useState("http://192.168.1.XX:8080/video");
+    const [sdReady, setSdReady] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const dronePosRef = useRef({ x: 50, y: 50 }); // Local canvas coords for drone
-    const dt = droneTranslations[lang];
+    const dronePosRef = useRef({ x: 50, y: 50 });
 
-    // [NEW] Calibration State
-    const [calStep, setCalStep] = useState<'IDLE' | 'ZERO' | 'REF' | 'DONE'>('IDLE');
-    const [calData, setCalData] = useState({
-        zeroY: 0,
-        refY: 0,
-        scale: 0.0055,
-        isCalibrated: false
-    });
-    // [FIX] Define debugY state to prevent crash
-    const [debugY, setDebugY] = useState(0);
-
-    // Load Calibration from LocalStorage
-    useEffect(() => {
-        const saved = localStorage.getItem('plimsoll_calibration');
-        if (saved) {
-            setCalData(JSON.parse(saved));
-        }
-    }, []);
-
-    // Save Calibration
-    const saveCalibration = (zero: number, ref: number) => {
-        // ROBUST MATH:
-        // Distance in pixels = |Zero - Ref|
-        // 1 Meter = Distance
-        // Scale = 1 / Distance
-        const distPx = Math.abs(zero - ref);
-
-        const newData = {
-            zeroY: zero,
-            refY: ref,
-            scale: 1 / (distPx || 1),
-            isCalibrated: true
-        };
-        console.log("CALIBRATION SAVED:", newData);
-        setCalData(newData);
-        localStorage.setItem('plimsoll_calibration', JSON.stringify(newData));
-        setCalStep('DONE');
-        setTimeout(() => setCalStep('IDLE'), 3000);
-    };
-
-    // Mock WebSocket Connection & Live Telemetry Polling
+    // Battery idle drain
     useEffect(() => {
         const interval = setInterval(() => {
-            if (isSimulating) {
-                // Idle drift simulation
-                setDrone(prev => ({ ...prev, battery: Math.max(0, prev.battery - 0.01) }));
-            } else if (streamSource === 'LIVE') {
-                // Poll Backend for AI Telemetry
-                axios.get('http://localhost:8000/api/stream/telemetry')
-                    .then(res => {
-                        const data = res.data;
-                        // console.log("AI Telemetry:", data); // DEBUG LOG
-
-                        // Accept both TRACKING and SEARCHING for the UI demo, so altitude always moves if connected
-                        if (data.status === "TRACKING" || data.status === "SEARCHING_EDGE") {
-                            setDrone(prev => ({
-                                ...prev,
-                                status: data.status === "TRACKING" ? "AI_LOCKED" : "SCANNING...",
-                                mission: "SURVEYING"
-                            }));
-
-                            setDebugY(data.waterline_y); // Update debug value
-
-                            // [CALIBRATION LOGIC - ROBUST]
-                            let realAlt = 0;
-                            if (calData.isCalibrated) {
-                                // Alt = Distance From Zero * Scale
-                                // Distance = |Zero - Current|
-                                // This works regardless of Up/Down direction
-                                realAlt = Math.abs(calData.zeroY - data.waterline_y) * calData.scale;
-                            } else {
-                                // Fallback
-                                const frameH = data.frame_height || 1920;
-                                realAlt = (frameH - data.waterline_y) * 0.002;
-                            }
-
-                            if (!isNaN(realAlt)) {
-                                setDrone(prev => ({ ...prev, altitude: realAlt }));
-                            }
-
-                        } else if (data.status === "WAITING_VIDEO") {
-                            setDrone(prev => ({ ...prev, status: "WAITING_VID", mission: "BUFFERING" }));
-                        } else {
-                            // Show the actual status (NO_DATA, etc)
-                            setDrone(prev => ({ ...prev, status: data.status || "NO_SIGNAL" }));
-                        }
-                    })
-                    .catch((err) => {
-                        console.error(err);
-                        setDrone(prev => ({ ...prev, status: "API_ERROR" }));
-                    });
-            } else {
-                // Idle drift
-                setDrone(prev => ({ ...prev, battery: Math.max(0, prev.battery - 0.01) }));
-            }
+            setDrone(prev => ({ ...prev, battery: Math.max(0, prev.battery - 0.01) }));
         }, 1000);
         return () => clearInterval(interval);
-    }, [isSimulating, streamSource, calData, calStep]);
-
-    // [NEW] Auto-Connect Logic with Debounce & Validation
-    useEffect(() => {
-        if (streamSource === 'LIVE') {
-            // Prevent connecting to the placeholder
-            if (rtspUrl.includes("XX") || rtspUrl.length < 10) {
-                console.log("Waiting for valid IP address...");
-                return;
-            }
-
-            const timeoutId = setTimeout(() => {
-                console.log("Auto-connecting to AI Core...", rtspUrl);
-                axios.post('http://localhost:8000/api/stream/connect', { url: rtspUrl })
-                    .then(() => console.log("AI Core Connection Initiated"))
-                    .catch(err => console.error("Auto-connect failed:", err));
-            }, 1500); // Wait 1.5s after user stops typing
-
-            return () => clearTimeout(timeoutId);
-        }
-    }, [streamSource, rtspUrl]);
+    }, []);
 
     // Draw Map & Waypoints
     useEffect(() => {
@@ -356,85 +214,85 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
             <div className="lg:col-span-1 space-y-6 flex flex-col">
                 <div className={cn(
                     "rounded-2xl p-6 border transition-colors duration-300",
-                    theme === 'dark' ? "bg-[#112240] border-[#8892b0]/10" : "bg-white border-gray-200 shadow-sm"
+                    theme === 'midnight' ? "bg-black border-yellow-400/20" : (theme === 'dark' ? "bg-white/5 border-white/10" : "bg-white border-gray-200 shadow-sm")
                 )}>
                     <div className="flex items-center justify-between mb-6">
-                        <h3 className={cn("font-bold flex items-center gap-2", theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900")}>
-                            <Plane className="text-[#64ffda]" /> {dt.status}
+                        <h3 className={cn("font-bold flex items-center gap-2", theme === 'dark' ? "text-white" : "text-gray-900")}>
+                            <Plane className="text-yellow-400" /> {t('pilot.drone_status')}
                         </h3>
                         <div className={`px-3 py-1 rounded-full text-[10px] font-bold ${connected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                            {connected ? dt.link_active : dt.no_signal}
+                            {connected ? t('pilot.link_active') : t('pilot.no_signal')}
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <TelemetryStat icon={<Navigation size={18} />} label={dt.altitude} value={`${drone.altitude.toFixed(1)}m`} theme={theme} />
-                        <TelemetryStat icon={<Battery size={18} />} label={dt.battery} value={`${Math.floor(drone.battery)}%`} theme={theme} />
+                        <TelemetryStat icon={<Navigation size={18} />} label={t('pilot.altitude')} value={`${drone.altitude.toFixed(1)}m`} theme={theme} />
+                        <TelemetryStat icon={<Battery size={18} />} label={t('pilot.battery')} value={`${Math.floor(drone.battery)}%`} theme={theme} />
                         <TelemetryStat
                             icon={<Activity size={18} />}
-                            label={dt.mode}
+                            label={t('pilot.mode')}
                             value={drone.status}
-                            color={drone.status === "AI_LOCKED" ? "text-[#64ffda]" : "text-yellow-400"}
+                            color={drone.status === "AI_LOCKED" ? "text-yellow-400" : "text-orange-400"}
                             theme={theme}
                         />
-                        <TelemetryStat icon={<Compass size={18} />} label={dt.pitch} value={`${drone.gimbal_pitch}°`} theme={theme} />
+                        <TelemetryStat icon={<Compass size={18} />} label={t('pilot.pitch')} value={`${drone.gimbal_pitch}°`} theme={theme} />
                     </div>
 
                     <div className="mt-8 space-y-3">
                         {/* Large Touch Targets for Tablet */}
-                        <DroneBtn onClick={startMission} active={!isSimulating && waypoints.length > 0} label={dt.auto_survey} icon={<Play size={20} />} color="bg-[#64ffda]/10 text-[#64ffda] hover:bg-[#64ffda]/20 border border-[#64ffda]/30" />
+                        <DroneBtn onClick={startMission} active={!isSimulating && waypoints.length > 0} label={t('pilot.auto_survey')} icon={<Play size={20} />} color="bg-yellow-400 text-black hover:bg-yellow-300 shadow-xl" />
                         <div className="grid grid-cols-2 gap-3">
-                            <DroneBtn onClick={() => setDrone(prev => ({ ...prev, status: "FLYING" }))} active={drone.status === "READY"} label={dt.takeoff} icon={<Navigation size={18} />} color="bg-green-500/20 text-green-400 hover:bg-green-500/30" />
-                            <DroneBtn onClick={() => setDrone(prev => ({ ...prev, status: "Returning" }))} active={true} label={dt.land} icon={<ShieldAlert size={18} />} color="bg-red-500/20 text-red-400 hover:bg-red-500/30" />
+                            <DroneBtn onClick={() => setDrone(prev => ({ ...prev, status: "FLYING" }))} active={drone.status === "READY"} label={t('pilot.takeoff')} icon={<Navigation size={18} />} color="bg-white/10 text-white hover:bg-white/20 border border-white/10" />
+                            <DroneBtn onClick={() => setDrone(prev => ({ ...prev, status: "Returning" }))} active={true} label={t('pilot.land')} icon={<ShieldAlert size={18} />} color="bg-red-500/20 text-red-400 hover:bg-red-500/30" />
                         </div>
                     </div>
                 </div>
 
                 <div className={cn(
                     "flex-1 rounded-2xl p-6 border transition-colors duration-300 flex flex-col",
-                    theme === 'dark' ? "bg-[#112240] border-[#8892b0]/10" : "bg-white border-gray-200 shadow-sm"
+                    theme === 'midnight' ? "bg-black border-yellow-400/10" : (theme === 'dark' ? "bg-white/5 border-white/10" : "bg-white border-gray-200 shadow-sm")
                 )}>
-                    <h4 className="text-xs text-[#8892b0] uppercase mb-4 tracking-widest">{dt.nav_logs}</h4>
-                    <div className="flex-1 overflow-y-auto text-[10px] font-mono space-y-2">
-                        <div className="text-blue-400">[SYSTEM] DJI SDK V5.2.1 Initialized...</div>
-                        <div className="text-green-400">[GPS] Satellites Locked (12)</div>
-                        {nightVision && <div className="text-green-500">[OPTICS] NIGHT VISION ENABLED (CLAHE)</div>}
+                    <h4 className="text-xs text-slate-500 uppercase mb-4 tracking-widest font-bold">{t('pilot.nav_logs')}</h4>
+                    <div className="flex-1 overflow-y-auto text-[10px] font-mono space-y-2 custom-scrollbar">
+                        <div className="text-blue-400 font-bold">{t('pilot.system_stable')}</div>
+                        <div className="text-green-400 font-bold">{t('pilot.gps_link')}</div>
+                        {nightVision && <div className="text-green-500 font-bold uppercase">{t('pilot.night_vision_active')}</div>}
                         {waypoints.map((wp, i) => (
-                            <div key={wp.id} className="text-[#64ffda]">&gt; Added Waypoint {i + 1} at grid {wp.x.toFixed(0)}, {wp.y.toFixed(0)}</div>
+                            <div key={wp.id} className="text-yellow-400">&gt; WP_ADD: {i + 1} // GRID: {wp.x.toFixed(0)}, {wp.y.toFixed(0)}</div>
                         ))}
-                        {isSimulating && <div className="text-yellow-400 animate-pulse">[MISSION] EXECUTING FLIGHT PLAN...</div>}
+                        {isSimulating && <div className="text-yellow-400 animate-pulse font-bold">{t('pilot.executing_flight')}</div>}
                     </div>
                 </div>
             </div>
 
             {/* Right: Connect Map Logic */}
-            <div className="lg:col-span-2 flex flex-col h-full rounded-2xl overflow-hidden relative shadow-2xl border border-[#64ffda]/20 bg-black">
+            <div className="lg:col-span-2 flex flex-col h-full rounded-[2rem] overflow-hidden relative shadow-2xl border border-white/10 bg-[#020617]">
                 {/* Map Header Overlay */}
-                <div className="absolute top-0 left-0 w-full p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start pointer-events-none">
+                <div className="absolute top-0 left-0 w-full p-6 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start pointer-events-none">
                     <div>
-                        <h2 className="text-white font-bold text-lg">{dt.dynamic_map}</h2>
-                        <p className="text-[#64ffda] text-xs font-mono">{dt.satellite_view}</p>
+                        <h2 className="text-white font-black text-xl uppercase tracking-tighter italic">{t('pilot.mission_planner')}</h2>
+                        <p className="text-yellow-400 text-[10px] font-mono uppercase tracking-widest">{t('pilot.tap_waypoints')}</p>
                     </div>
                     <div className="flex gap-2 pointer-events-auto">
                         <button
                             onClick={() => setNightVision(!nightVision)}
-                            className={`p-2 rounded-lg backdrop-blur border transition-all ${nightVision ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}
+                            className={`p-3 rounded-xl backdrop-blur transition-all flex items-center gap-2 border ${nightVision ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-white/5 text-white border-white/10 hover:bg-white/10'}`}
                         >
                             <Activity size={18} className={nightVision ? "animate-pulse" : ""} />
-                            <span className="ml-2 text-xs font-bold hidden md:inline">NVG MODE</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{t('pilot.nvg_filter')}</span>
                         </button>
-                        <button onClick={clearWaypoints} className="p-2 bg-red-500/20 text-red-400 rounded-lg backdrop-blur hover:bg-red-500/30">
+                        <button onClick={clearWaypoints} className="p-3 bg-red-500/10 text-red-500 rounded-xl backdrop-blur hover:bg-red-500/20 border border-red-500/20">
                             <Trash2 size={18} />
                         </button>
                     </div>
                 </div>
 
                 {/* Interactive Canvas */}
-                <div className="relative flex-1 bg-[#0a192f] cursor-crosshair group overflow-hidden">
+                <div className="relative flex-1 bg-[#020617] cursor-crosshair group overflow-hidden">
                     {/* Background Map Image */}
                     <div
                         className={cn(
-                            "absolute inset-0 opacity-30 pointer-events-none bg-cover bg-center transition-all duration-700",
+                            "absolute inset-0 opacity-20 pointer-events-none bg-cover bg-center transition-all duration-700",
                             nightVision ? "grayscale contrast-125 brightness-150 sepia hue-rotate-50 saturate-200" : ""
                         )}
                         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1590644365607-1c5a519a9a37?q=80&w=1200&auto=format&fit=crop')" }}
@@ -456,148 +314,55 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
                     {/* Tutorial Overlay */}
                     {waypoints.length === 0 && !isSimulating && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="bg-black/50 backdrop-blur-sm px-6 py-4 rounded-full border border-[#64ffda]/30 text-[#64ffda] flex items-center gap-3 animate-pulse">
-                                <Plus size={20} />
-                                <span className="font-bold tracking-widest text-sm">TAP TO ADD WAYPOINT</span>
+                            <div className="bg-black/60 backdrop-blur-xl px-10 py-6 rounded-full border border-yellow-400/20 text-yellow-400 flex items-center gap-4 animate-pulse shadow-2xl">
+                                <Plus size={24} strokeWidth={3} />
+                                <span className="font-black tracking-[0.2em] text-sm uppercase italic">{t('pilot.inject_waypoint')}</span>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Live Stream PIP (Picture in Picture) */}
+                {/* SD Card Mode Panel */}
                 <div className={cn(
-                    "absolute bottom-4 right-4 w-64 h-48 bg-black rounded-lg border shadow-2xl overflow-hidden z-20 transition-all duration-500 flex flex-col",
-                    nightVision ? "border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]" : "border-white/20"
+                    "absolute bottom-6 right-6 w-72 bg-[#020617]/90 rounded-2xl border shadow-2xl overflow-hidden z-20 backdrop-blur-xl",
+                    "border-yellow-400/20"
                 )}>
-                    {/* Header */}
-                    <div className="bg-black/80 px-2 py-1 flex items-center justify-between z-30 border-b border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className={`w-2 h-2 rounded-full ${streamSource === 'LIVE' ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`}></div>
-                            <span className="text-[8px] font-bold text-white tracking-wider">
-                                {streamSource === 'LIVE' ? 'IP_WEBCAM_LIVE' : 'SIMULATION_FEED'}
-                            </span>
+                    <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                            <HardDrive size={12} className="text-yellow-400" />
+                            <span className="text-[8px] font-black text-yellow-400 tracking-[0.2em] uppercase">SD Card Mode</span>
                         </div>
-                        <div className="flex gap-1">
-                            <button
-                                onClick={() => setCalStep('ZERO')}
-                                className="text-[8px] px-2 py-0.5 bg-[#64ffda]/10 text-[#64ffda] rounded hover:bg-[#64ffda]/20 border border-[#64ffda]/30 flex items-center gap-1"
-                            >
-                                <Activity size={8} /> REC
-                            </button>
-                            <button
-                                onClick={() => setStreamSource(prev => prev === 'SIMULATION' ? 'LIVE' : 'SIMULATION')}
-                                className="text-[8px] px-2 py-0.5 bg-white/10 rounded hover:bg-white/20 text-white"
-                            >
-                                SWITCH SOURCE
-                            </button>
-                        </div>
+                        <div className={`w-1.5 h-1.5 rounded-full ${sdReady ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
                     </div>
-
-                    {/* Content */}
-                    <div className="relative flex-1 bg-black">
-                        {streamSource === 'SIMULATION' ? (
-                            <img
-                                src="https://images.unsplash.com/photo-1581093583449-edb5adbea543?q=80&w=600&auto=format&fit=crop"
-                                className={cn(
-                                    "w-full h-full object-cover transition-all duration-700",
-                                    nightVision ? "grayscale contrast-125 brightness-150 sepia hue-rotate-50 saturate-200" : "opacity-80"
-                                )}
-                            />
-                        ) : (
-                            <div className="w-full h-full relative group">
-                                <img
-                                    src={
-                                        (rtspUrl.includes("XX") || rtspUrl.length < 10)
-                                            ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23666'%3EWAITING FOR IP%3C/text%3E%3C/svg%3E"
-                                            : rtspUrl
-                                    }
-                                    className={cn(
-                                        "w-full h-full object-cover transform rotate-90 scale-125", // Rotated for phone portrait mode
-                                        nightVision ? "grayscale contrast-125 brightness-150 sepia hue-rotate-50 saturate-200" : ""
-                                    )}
-                                    onError={(e) => {
-                                        // Use a simple data URI for a gray placeholder to avoid network errors
-                                        (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='14' fill='%23666'%3ENO SIGNAL%3C/text%3E%3C/svg%3E";
-                                    }}
-                                />
-                                {/* URL Input Overlay (Hidden unless hovering) */}
-                                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2">
-                                    <input
-                                        type="text"
-                                        value={rtspUrl}
-                                        onChange={(e) => setRtspUrl(e.target.value)}
-                                        className="bg-black border border-[#64ffda] text-[#64ffda] text-[10px] p-2 w-[90%] font-mono"
-                                        placeholder="http://IP:8080/video"
-                                    />
-                                    <button
-                                        onClick={() => {
-                                            axios.post('http://localhost:8000/api/stream/connect', { url: rtspUrl })
-                                                .then(() => alert("AI VISION CORE: CONNECTED"))
-                                                .catch(err => alert("CONNECTION FAILED: " + err.message));
-                                        }}
-                                        className="bg-[#64ffda]/20 text-[#64ffda] text-[9px] font-bold px-3 py-1 rounded border border-[#64ffda]/50 hover:bg-[#64ffda]/40 hover:scale-105 transition-all"
-                                    >
-                                        CONNECT TO AI CORE
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        {nightVision && <div className="absolute inset-0 bg-green-500/10 pointer-events-none mix-blend-overlay"></div>}
-
-                        {/* CALIBRATION WIZARD OVERLAY */}
-                        {calStep !== 'IDLE' && calStep !== 'DONE' && (
-                            <div className="absolute inset-0 bg-black/90 z-40 flex flex-col items-center justify-center p-4 text-center">
-                                <h5 className="text-[#64ffda] font-bold text-xs mb-1 uppercase tracking-widest">
-                                    {calStep === 'ZERO' ? '1. ZERO POINT SCAN' : '2. REFERENCE SCAN'}
-                                </h5>
-                                <p className="text-gray-400 text-[9px] mb-3 leading-tight">
-                                    {calStep === 'ZERO' ? 'Place sensor on FLOOR level.' : 'Raise sensor to exactly 1.0 METER.'}
-                                    <br /><span className="text-xs text-[#64ffda] font-mono mt-1 block">LIVE SENSOR: {debugY} px</span>
-                                    {calStep === 'REF' && <span className="text-[9px] text-gray-500 block mt-1">Zero Point set at: {calData.zeroY} px</span>}
-                                </p>
-                                <button
-                                    onClick={async () => {
-                                        // STATISTICAL SAMPLING (Unicorn Standard)
-                                        // Take 10 samples over 1 second to eliminate jitter
-                                        const samples: number[] = [];
-                                        const btn = document.getElementById('cal-btn');
-                                        if (btn) btn.innerText = "SAMPLING...";
-
-                                        for (let i = 0; i < 10; i++) {
-                                            try {
-                                                const res = await axios.get('http://localhost:8000/api/stream/telemetry');
-                                                samples.push(res.data.waterline_y);
-                                            } catch (e) { }
-                                            await new Promise(r => setTimeout(r, 100)); // 100ms delay
-                                        }
-
-                                        // Calculate Mean (Average)
-                                        const sum = samples.reduce((a, b) => a + b, 0);
-                                        const avg = Math.round(sum / (samples.length || 1));
-
-                                        if (calStep === 'ZERO') {
-                                            setCalData(prev => ({ ...prev, zeroY: avg }));
-                                            setCalStep('REF');
-                                        } else {
-                                            saveCalibration(calData.zeroY, avg);
-                                        }
-                                    }}
-                                    id="cal-btn"
-                                    className="bg-[#64ffda] text-black font-bold text-[10px] px-3 py-1.5 rounded animate-pulse cursor-pointer hover:scale-105 transition-all"
-                                >
-                                    INITIATE SCAN
-                                </button>
-                                <button onClick={() => setCalStep('IDLE')} className="text-gray-500 text-[8px] mt-2 hover:text-white">CANCEL</button>
-                            </div>
-                        )}
-                        {calStep === 'DONE' && (
-                            <div className="absolute inset-0 bg-[#64ffda]/90 z-40 flex flex-col items-center justify-center p-2 text-center animate-in fade-in duration-300">
-                                <Activity size={24} className="text-black mb-1" />
-                                <h5 className="text-black font-bold text-xs uppercase">CALIBRATION SAVED</h5>
-                                <p className="text-black/80 text-[9px]">AI Sensor Optimized</p>
-                            </div>
-                        )}
-
+                    <div className="p-5 flex flex-col items-center gap-4">
+                        <div className={cn(
+                            "w-16 h-16 rounded-2xl flex items-center justify-center border-2 transition-all",
+                            sdReady ? "border-green-400/50 bg-green-500/10" : "border-yellow-400/20 bg-yellow-400/5"
+                        )}>
+                            <HardDrive size={28} className={sdReady ? "text-green-400" : "text-yellow-400/60"} />
+                        </div>
+                        <div className="text-center">
+                            <p className={cn(
+                                "text-[10px] font-black uppercase tracking-[0.15em]",
+                                sdReady ? "text-green-400" : "text-yellow-400/80"
+                            )}>
+                                {sdReady ? "SD_CARD_DETECTED" : "AWAITING_SD_CARD"}
+                            </p>
+                            <p className="text-[9px] text-slate-600 font-mono mt-1 uppercase tracking-widest">
+                                {sdReady ? "DJI Air 3S / DCIM ready" : "Insert SD card to begin"}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setSdReady(prev => !prev)}
+                            className={cn(
+                                "w-full text-[9px] font-black px-4 py-2.5 rounded-xl uppercase tracking-widest transition-all border",
+                                sdReady
+                                    ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+                                    : "bg-yellow-400/10 text-yellow-400 border-yellow-400/20 hover:bg-yellow-400/20"
+                            )}
+                        >
+                            {sdReady ? "Eject_Card" : "Simulate_Insert"}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -605,17 +370,17 @@ export default function DronePilot({ lang, theme }: DronePilotProps) {
     );
 }
 
-function TelemetryStat({ icon, label, value, color = "text-[#e6f1ff]", theme }: { icon: React.ReactNode, label: string, value: string, color?: string, theme: 'light' | 'dark' }) {
+function TelemetryStat({ icon, label, value, color = "text-white", theme }: { icon: React.ReactNode, label: string, value: string, color?: string, theme: 'light' | 'dark' | 'midnight' }) {
     return (
         <div className={cn(
-            "p-4 rounded-xl border transition-colors duration-300",
-            theme === 'dark' ? "bg-[#0a192f] border-[#8892b0]/5" : "bg-gray-50 border-gray-100"
+            "p-5 rounded-2xl border transition-colors duration-300",
+            theme === 'midnight' ? "bg-black border-white/5" : (theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")
         )}>
-            <div className="text-[#8892b0] flex items-center gap-2 mb-1">
+            <div className="text-slate-500 flex items-center gap-2 mb-2">
                 {icon}
-                <span className="text-[10px] uppercase font-bold tracking-wider">{label}</span>
+                <span className="text-[9px] uppercase font-black tracking-[0.15em]">{label}</span>
             </div>
-            <div className={cn("text-lg font-mono font-bold", theme === 'light' && color === "text-[#e6f1ff]" ? "text-gray-900" : color)}>{value}</div>
+            <div className={cn("text-xl font-mono font-black tracking-tight", theme === 'light' && color === "text-white" ? "text-gray-900" : color)}>{value}</div>
         </div>
     )
 }
@@ -634,11 +399,11 @@ function DroneBtn({ onClick, active, label, icon, color }: DroneBtnProps) {
             onClick={onClick}
             disabled={!active}
             className={cn(
-                "w-full flex items-center justify-between px-6 py-4 rounded-xl transition-all font-bold text-xs uppercase tracking-widest",
-                active ? color : 'bg-[#1a2c4e] text-[#4a5a7a] cursor-not-allowed'
+                "w-full flex items-center justify-between px-8 py-5 rounded-2xl transition-all font-black text-[10px] uppercase tracking-[0.2em] italic",
+                active ? color : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5 opacity-50'
             )}
         >
-            <span className="flex items-center gap-3">{icon} {label}</span>
+            <span className="flex items-center gap-4">{icon} {label}</span>
             <Wifi size={14} className={active ? 'animate-pulse' : 'opacity-20'} />
         </button>
     )

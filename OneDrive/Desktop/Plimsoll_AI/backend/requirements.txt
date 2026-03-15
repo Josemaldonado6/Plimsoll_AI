@@ -1,4 +1,5 @@
 fastapi
+watchdog
 uvicorn[standard]
 numpy
 opencv-python-headless
@@ -7,6 +8,15 @@ python-multipart
 sqlalchemy
 aiosqlite
 reportlab
-ultralytics
 paddlepaddle
 paddleocr
+openvino-dev
+nncf
+onnxruntime
+beautifulsoup4
+scipy
+Pillow
+pymodbus
+transformers
+accelerate
+timm

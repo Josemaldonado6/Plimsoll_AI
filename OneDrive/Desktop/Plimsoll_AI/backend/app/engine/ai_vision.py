@@ -1,153 +1,399 @@
 # -----------------------------------------------------------------------------
-# PROYECTO: PLIMSOLL AI - MARITIME AUDIT SYSTEM
-# ARCHIVO: ai_vision.py
+# PROJECT: PLIMSOLL AI - VERSION 4 (THE DEPTH-AWARE ERA)
+# MODULE: ai_vision.py
 #
-# DERECHOS DE AUTOR / COPYRIGHT:
-# (c) 2026 José de Jesús Maldonado Ordaz. Todos los derechos reservados.
+# ARQUITECTURA DE INFERENCIA — OPENVINO INT8 (Edge-Native):
+#   1. YOLOv11n INT8   — Detección de ROI a alta velocidad.
+#   2. SAM 2-B INT8    — Segmentación pixel-perfecta de la línea de flotación.
+#   3. Depth Anything V2 Small INT8 — Corrección 3D de pitch/yaw.
 #
-# PROPIEDAD INTELECTUAL:
-# Este código fuente, algoritmos, lógica de negocio y diseño de interfaz
-# son propiedad exclusiva de su autor. Queda prohibida su reproducción,
-# distribución o uso sin una licencia otorgada por escrito.
-#
-# REGISTRO:
-# Protegido bajo la Ley Federal del Derecho de Autor (México) y
-# Tratados Internacionales de la OMPI.
-#
-# CONFIDENCIALIDAD:
-# Este archivo contiene SECRETOS INDUSTRIALES. Su acceso no autorizado
-# constituye un delito federal.
+# SIN PyTorch en tiempo de ejecución. Única dependencia de inferencia: openvino-dev.
+# Ejecutar export_openvino.py UNA VEZ para generar los modelos INT8.
 # -----------------------------------------------------------------------------
+
 import cv2
 import numpy as np
-import os
 import logging
-from app.engine.draft_calculator import DraftSurveyor as LegacySurveyor
+import asyncio
+import time
+import os
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
-# Configure logging
+import openvino as ov
+
+from app.engine.wca import WaveCancellationAlgorithm
+from app.engine.telemetry_parser import telemetry_parser
+
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Plimsoll-V4-Vision")
 
-class AIDraftSurveyor:
+# ---------------------------------------------------------------------------
+# Paths a los modelos INT8 cuantizados
+# ---------------------------------------------------------------------------
+_MODELS_DIR = Path(__file__).resolve().parents[3] / "data" / "models"
+
+_YOLO_XML  = _MODELS_DIR / "yolo11n_openvino_int8"  / "yolo11n.xml"
+_SAM2_XML  = _MODELS_DIR / "sam2_openvino_int8"     / "sam2_b.xml"
+_DEPTH_XML = _MODELS_DIR / "depth_v2_openvino_int8" / "depth_anything_v2.xml"
+
+# Tamaños de entrada por modelo
+_YOLO_SIZE  = (640, 640)
+_SAM2_SIZE  = (1024, 1024)
+_DEPTH_SIZE = (518, 518)
+
+# Hiperparámetros de detección
+_CONF_THRESHOLD = 0.5
+_IOU_THRESHOLD  = 0.4
+
+# ImageNet mean/std para Depth Anything V2 y SAM 2
+_IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+_IMAGENET_STD  = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+
+
+# ===========================================================================
+# Utilidades de preprocesado (puro NumPy + OpenCV)
+# ===========================================================================
+
+def _preprocess_yolo(frame: np.ndarray) -> np.ndarray:
+    """BGR frame → NCHW float32 [0,1] RGB para YOLOv11n."""
+    img = cv2.resize(frame, _YOLO_SIZE)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    return np.expand_dims(np.transpose(img, (2, 0, 1)), 0)
+
+
+def _preprocess_imagenet(frame: np.ndarray, size: Tuple[int, int]) -> np.ndarray:
+    """BGR frame → NCHW float32 normalizado con ImageNet stats."""
+    img = cv2.resize(frame, size)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    img = (img - _IMAGENET_MEAN) / _IMAGENET_STD
+    return np.expand_dims(np.transpose(img, (2, 0, 1)), 0)
+
+
+def _nms_yolo(raw_output: np.ndarray, img_shape: Tuple[int, int]) -> List[np.ndarray]:
+    """
+    Post-procesado YOLO11n OpenVINO.
+    raw_output: [1, num_classes+4, 8400]  (cx, cy, w, h, cls0, cls1...)
+    Devuelve lista de bboxes [x1, y1, x2, y2] escalados al frame original.
+    """
+    preds = raw_output[0].T       # [8400, 4+num_classes]
+    boxes_cxcywh = preds[:, :4]
+    class_scores = preds[:, 4:]
+
+    class_ids = np.argmax(class_scores, axis=1)
+    confidences = class_scores[np.arange(len(class_scores)), class_ids]
+
+    mask = confidences > _CONF_THRESHOLD
+    if not np.any(mask):
+        return []
+
+    boxes_f  = boxes_cxcywh[mask]
+    confs_f  = confidences[mask].tolist()
+
+    # cx,cy,w,h (en px de 640x640) → x1,y1,x2,y2
+    x1 = (boxes_f[:, 0] - boxes_f[:, 2] / 2)
+    y1 = (boxes_f[:, 1] - boxes_f[:, 3] / 2)
+    x2 = (boxes_f[:, 0] + boxes_f[:, 2] / 2)
+    y2 = (boxes_f[:, 1] + boxes_f[:, 3] / 2)
+    boxes_xyxy = np.stack([x1, y1, x2, y2], axis=1)
+
+    indices = cv2.dnn.NMSBoxes(
+        boxes_xyxy.tolist(), confs_f, _CONF_THRESHOLD, _IOU_THRESHOLD
+    )
+    if len(indices) == 0:
+        return []
+
+    # Escalar al tamaño del frame original
+    sx = img_shape[1] / _YOLO_SIZE[0]
+    sy = img_shape[0] / _YOLO_SIZE[1]
+    scale = np.array([sx, sy, sx, sy], dtype=np.float32)
+
+    selected = boxes_xyxy[indices.flatten()]
+    return [row * scale for row in selected]
+
+
+# ===========================================================================
+# VisionTrinity — Motor neural OpenVINO INT8 (sin PyTorch en runtime)
+# ===========================================================================
+
+class VisionTrinity:
+    """
+    Motor neural principal de Plimsoll V4.
+    Carga exclusivamente modelos INT8 cuantizados en formato OpenVINO IR.
+    Cero dependencias de PyTorch en tiempo de ejecución.
+    """
+
     def __init__(self):
-        self.yolo_model = None
-        self.ocr_model = None
-        self.legacy = LegacySurveyor() # Fallback
+        self.core = ov.Core()
+
+        # Modelos compilados (lazy loading)
+        self._yolo:  Optional[ov.CompiledModel] = None
+        self._sam2:  Optional[ov.CompiledModel] = None
+        self._depth: Optional[ov.CompiledModel] = None
+
+        # Parámetros ópticos (DJI Air 3S / 4K)
+        self.focal_length_px  = 2400
+        self.principal_point_y = 1080
+
+        self.wca = WaveCancellationAlgorithm()
+        self.ocr_queue = asyncio.Queue()
+
+        logger.info("Plimsoll V4: VisionTrinity (OpenVINO INT8) inicializada.")
+
+    # ------------------------------------------------------------------
+    # Carga lazy de modelos
+    # ------------------------------------------------------------------
 
     def _load_models(self):
-        """Lazy load heavy AI models"""
-        if self.yolo_model is None:
-            try:
-                from ultralytics import YOLO
-                logger.info("Loading YOLOv8 model...")
-                self.yolo_model = YOLO("yolov8n.pt")
-            except Exception as e:
-                logger.error(f"Failed to load YOLO: {e}")
+        if self._yolo is None:
+            if not _YOLO_XML.exists():
+                raise FileNotFoundError(
+                    f"Modelo YOLOv11n INT8 no encontrado: {_YOLO_XML}\n"
+                    "Ejecuta: python -m app.engine.export_openvino"
+                )
+            self._yolo = self.core.compile_model(
+                self.core.read_model(str(_YOLO_XML)), device_name="CPU"
+            )
+            logger.info(f"YOLOv11n INT8 cargado: {_YOLO_XML.name}")
 
-        if self.ocr_model is None:
-            try:
-                from paddleocr import PaddleOCR
-                logger.info("Loading PaddleOCR model...")
-                # use_gpu=False for standard docker compatibility
-                self.ocr_model = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, show_log=False)
-            except Exception as e:
-                logger.error(f"Failed to load OCR: {e}")
+        if self._sam2 is None:
+            if not _SAM2_XML.exists():
+                raise FileNotFoundError(
+                    f"Modelo SAM 2-B INT8 no encontrado: {_SAM2_XML}\n"
+                    "Ejecuta: python -m app.engine.export_openvino"
+                )
+            self._sam2 = self.core.compile_model(
+                self.core.read_model(str(_SAM2_XML)), device_name="CPU"
+            )
+            logger.info(f"SAM 2-B INT8 cargado: {_SAM2_XML.name}")
 
-    def process_video(self, video_path: str):
-        """Run AI Analysis on video"""
-        # Ensure models are loaded
+        if self._depth is None:
+            if not _DEPTH_XML.exists():
+                raise FileNotFoundError(
+                    f"Modelo Depth Anything V2 INT8 no encontrado: {_DEPTH_XML}\n"
+                    "Ejecuta: python -m app.engine.export_openvino"
+                )
+            self._depth = self.core.compile_model(
+                self.core.read_model(str(_DEPTH_XML)), device_name="CPU"
+            )
+            logger.info(f"Depth Anything V2 INT8 cargado: {_DEPTH_XML.name}")
+
+    # ------------------------------------------------------------------
+    # Pipeline principal
+    # ------------------------------------------------------------------
+
+    async def analyze_frame(self, frame: np.ndarray) -> Dict:
+        """
+        Flujo secuencial de visión:
+        ROI Detection → Segmentación → Corrección 3D → Estabilización WCA
+        """
         self._load_models()
+        t0 = time.time()
 
-        if not self.yolo_model or not self.ocr_model:
-            logger.warning("AI Models not available, falling back to legacy CV")
-            return self.legacy.process_video(video_path)
+        # 1. Detección (YOLOv11n INT8)
+        bboxes = self.detect_roi_yolo11(frame)
+        if not bboxes:
+            return {"status": "SEARCHING", "waterline_y": 0}
 
-        cap = cv2.VideoCapture(video_path)
-        frames = []
-        frame_count = 0
-        
-        # Sample frames (simulating intelligent selection)
-        while cap.isOpened() and frame_count < 60:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            if frame_count % 10 == 0: 
-                frames.append(frame)
-            frame_count += 1
-        cap.release()
+        # 2. Segmentación (SAM 2-B INT8)
+        mask = self.segment_waterline_sam2(frame, bboxes)
 
-        if not frames:
-            return {"error": "No frames extracted"}
+        # 3. Estimación de profundidad (Depth Anything V2 INT8)
+        depth_map = self.estimate_depth_3d(frame)
 
-        # Use middle frame for heavy inference
-        analysis_frame = frames[len(frames)//2]
-        
-        # 1. YOLO Inference
-        logger.info("Running YOLO inference...")
-        yolo_results = self.yolo_model(analysis_frame)
-        
-        # 2. OCR Inference
-        logger.info("Running OCR inference...")
-        ocr_result = self.ocr_model.ocr(analysis_frame, cls=True)
-        
-        detected_text = []
-        if ocr_result and ocr_result[0]:
-            for line in ocr_result[0]:
-                text = line[1][0]
-                confidence = line[1][1]
-                detected_text.append(f"{text} ({confidence:.2f})")
+        # 4. Corrección de pitch/yaw (modelo pinhole)
+        corrected = self.correct_pitch_yaw(mask, depth_map)
 
-        # 3. Annotate Frame for Evidence
-        annotated_frame = yolo_results[0].plot() # YOLO annotations
-        
-        # Add OCR Text overlay
-        y_offset = 30
-        for text in detected_text[:5]: # Show top 5 detections
-            cv2.putText(annotated_frame, f"OCR: {text}", (10, y_offset), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            y_offset += 30
+        # 5. Estabilización de olas (WCA)
+        waterline = self.wca.process(corrected)
 
-        # Save Evidence
-        base_name = os.path.basename(video_path)
-        evidence_name = f"{os.path.splitext(base_name)[0]}_ai_evidence.jpg"
-        evidence_path = os.path.join(os.path.dirname(video_path), evidence_name)
-        cv2.imwrite(evidence_path, annotated_frame)
+        latency = (time.time() - t0) * 1000
 
-        # 4. Synthesize Result
-        # Map detected numbers to draft values
-        mapped_drafts = []
-        for text in detected_text:
-            try:
-                # Extract number from string like "8.4 (0.95)"
-                num_str = text.split(' ')[0]
-                val = float(num_str)
-                # Basic sanity check for draft marks (usually between 0 and 20)
-                if 0 < val < 25:
-                    mapped_drafts.append(val)
-            except:
-                continue
-
-        # If we have OCR readings, use them. Otherwise, fallback to CV heuristics.
-        if mapped_drafts:
-            draft_final = np.median(mapped_drafts)
-            confidence_final = min(0.95, 0.6 + (len(mapped_drafts) * 0.1))
-        else:
-            # Fallback to legacy CV logic if OCR fails (common in low-quality video)
-            draft_final = 8.42 # Legacy baseline
-            confidence_final = 0.45 # Low confidence warning
+        # 6. Encolar frame para calibración OCR asíncrona (key-frames únicamente)
+        if latency < 150:
+            await self.ocr_queue.put(frame.copy())
 
         return {
-            "draft_mean": round(float(draft_final), 2),
-            "confidence": round(float(confidence_final), 2),
-            "sea_state": "AI Stabilized" if len(frames) > 10 else "Static Analysis",
-            "telemetry": {
-                "waterline_y": 420, # Simulated pixel coordinate
-                "variance": 0.05
-            },
-            "evidence_path": evidence_path,
-            "ai_metadata": {
-                "objects_detected": len(yolo_results[0].boxes),
-                "ocr_readings": detected_text,
-                "engine": "Neural-Hybrid-v4-stable"
-            }
+            "status": "TRACKING_3D",
+            "waterline_y": int(waterline),
+            "latency_ms": round(latency, 1),
+            "device": "OpenVINO-INT8-CPU",
         }
+
+    # ------------------------------------------------------------------
+    # 1. Detección ROI — YOLOv11n INT8
+    # ------------------------------------------------------------------
+
+    def detect_roi_yolo11(self, frame: np.ndarray) -> List[np.ndarray]:
+        """
+        Devuelve lista de bboxes [x1, y1, x2, y2] escalados al frame original.
+        """
+        blob = _preprocess_yolo(frame)
+        result = self._yolo({self._yolo.input(0).any_name: blob})
+        raw = result[self._yolo.output(0)]   # [1, 6, 8400]
+        return _nms_yolo(raw, frame.shape[:2])
+
+    # ------------------------------------------------------------------
+    # 2. Segmentación — SAM 2-B INT8
+    # ------------------------------------------------------------------
+
+    def segment_waterline_sam2(
+        self, frame: np.ndarray, bboxes: List[np.ndarray]
+    ) -> np.ndarray:
+        """
+        Alimenta SAM 2 con el frame y los bboxes de YOLO.
+        Devuelve máscara binaria [H, W].
+        """
+        blob = _preprocess_imagenet(frame, _SAM2_SIZE)
+
+        # Normalizar bboxes al espacio [0, 1] de SAM2
+        sx = _SAM2_SIZE[0] / frame.shape[1]
+        sy = _SAM2_SIZE[1] / frame.shape[0]
+        scale = np.array([sx, sy, sx, sy], dtype=np.float32)
+        norm_bboxes = np.array([b * scale for b in bboxes], dtype=np.float32)
+
+        inputs = {self._sam2.input(0).any_name: blob}
+        # Si el modelo SAM2 exportado acepta un segundo input de bboxes
+        if len(self._sam2.inputs) > 1:
+            inputs[self._sam2.input(1).any_name] = norm_bboxes[:1]  # primera bbox
+
+        result  = self._sam2(inputs)
+        raw_mask = result[self._sam2.output(0)]   # [1, 1, H', W'] o [1, H', W']
+
+        # Aplanar a [H, W] y escalar al frame original
+        mask_2d = raw_mask.squeeze()
+        if mask_2d.ndim == 0:
+            return np.zeros(frame.shape[:2], dtype=np.uint8)
+
+        mask_resized = cv2.resize(
+            mask_2d.astype(np.float32),
+            (frame.shape[1], frame.shape[0]),
+            interpolation=cv2.INTER_LINEAR,
+        )
+        return (mask_resized > 0.5).astype(np.uint8)
+
+    # ------------------------------------------------------------------
+    # 3. Estimación de profundidad — Depth Anything V2 INT8
+    # ------------------------------------------------------------------
+
+    def estimate_depth_3d(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Genera un mapa de profundidad relativa normalizado.
+        Devuelve array float32 [H, W] escalado al frame original.
+        """
+        blob = _preprocess_imagenet(frame, _DEPTH_SIZE)
+        result = self._depth({self._depth.input(0).any_name: blob})
+        depth_raw = result[self._depth.output(0)].squeeze()   # [H', W']
+
+        depth_resized = cv2.resize(
+            depth_raw.astype(np.float32),
+            (frame.shape[1], frame.shape[0]),
+            interpolation=cv2.INTER_LINEAR,
+        )
+        return depth_resized
+
+    # ------------------------------------------------------------------
+    # 4. Corrección pitch/yaw — modelo pinhole
+    # ------------------------------------------------------------------
+
+    def correct_pitch_yaw(self, mask: np.ndarray, depth_map: np.ndarray) -> float:
+        """
+        PROYECCIÓN MODELO PINHOLE:
+        Corrige la inclinación del dron mapeando píxeles 2D a coordenadas
+        métricas 3D usando el mapa de profundidad.
+
+        Matemática:
+            Y_real = (y_px - centro) * Z / FocalLength
+            Corrected_height = sqrt(dY_real² + dZ²)
+
+        Returns: Coordenada Y corregida (relativa al punto principal).
+        """
+        y_idx, x_idx = np.where(mask > 0)
+        if len(y_idx) == 0:
+            return 0.0
+
+        y_min, y_max = int(np.min(y_idx)), int(np.max(y_idx))
+        mid_x = int(np.mean(x_idx))
+
+        z1 = float(depth_map[y_min, mid_x])
+        z2 = float(depth_map[y_max, mid_x])
+
+        y_real_1 = (y_min - self.principal_point_y) * z1 / self.focal_length_px
+        y_real_2 = (y_max - self.principal_point_y) * z2 / self.focal_length_px
+
+        dy_real = y_real_1 - y_real_2
+        dz      = z1 - z2
+
+        corrected_height = float(np.sqrt(dy_real ** 2 + dz ** 2))
+        return float(y_max + corrected_height * (y_max - y_min) / max(1.0, abs(dy_real)))
+
+
+# ===========================================================================
+# AsyncOCRWorker — Calibración métrica asíncrona (PaddleOCR, cola de baja prioridad)
+# ===========================================================================
+
+class AsyncOCRWorker:
+    """
+    Procesa frames de la cola OCR en segundo plano para calibrar la escala px→m.
+    Opera en una cola de baja prioridad para proteger el ciclo de inferencia.
+    """
+
+    def __init__(self, queue: asyncio.Queue):
+        self.queue = queue
+        self.last_calibration_time = 0.0
+
+    async def worker_loop(self):
+        logger.info("OCR Worker Loop: ONLINE.")
+        while True:
+            try:
+                await asyncio.sleep(0.001)
+                if not self.queue.empty():
+                    frame = await self.queue.get()
+                    # TODO: results = paddle_ocr.ocr(frame)
+                    logger.debug("Calibración OCR asíncrona ejecutándose...")
+                    self.queue.task_done()
+                    self.last_calibration_time = time.time()
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                logger.error(f"OCR Worker Error: {exc}")
+                await asyncio.sleep(1)
+
+
+# ===========================================================================
+# AIDraftSurveyor — Wrapper de compatibilidad para endpoints.py
+# ===========================================================================
+
+class AIDraftSurveyor:
+    """
+    Mantiene la interfaz pública que consume endpoints.py.
+    Delega el procesamiento de video al FrameSurveyor + VisionTrinity.
+    """
+
+    def __init__(self):
+        from app.engine.draft_calculator import DraftSurveyor
+        self.legacy = DraftSurveyor()
+        self._trinity = VisionTrinity()
+
+    def process_video(self, video_path: str) -> Dict:
+        """
+        Procesa un archivo MP4 extraído de la tarjeta SD del DJI Air 3S.
+        Ejecuta el pipeline OpenVINO INT8 a 1 FPS.
+        """
+        import asyncio as _asyncio
+        from app.engine.surveyor import FrameSurveyor
+
+        surveyor = FrameSurveyor(fps=1)
+        surveyor.vision = self._trinity  # compartir instancia ya cargada
+
+        loop = _asyncio.new_event_loop()
+        try:
+            results = loop.run_until_complete(surveyor.process_video(video_path))
+        finally:
+            loop.close()
+
+        if not results:
+            return {"error": "Sin cuadros válidos en el video."}
+
+        best = surveyor.get_best_reading() or results[-1]
+        return self.legacy.finalize_result(best, results)
