@@ -28,8 +28,11 @@ from sqlalchemy import select
 from app.db.database import engine, Base, get_db
 from app.db.models import Survey
 
-# Cloud-safe routers (sin dependencias de OpenVINO / PyTorch)
-from app.api import auth, drone, quote, omniscient, ballast
+# Cloud-safe routers (sin dependencias de OpenVINO / PyTorch / pymodbus)
+# EXCLUIDOS del cloud (requieren hardware físico o librerías Edge-only):
+#   - ballast  → BallastPLCBridge usa pymodbus (PLC físico en el barco)
+#   - endpoints → AIDraftSurveyor usa OpenVINO INT8 (NPU en la tablet)
+from app.api import auth, drone, quote, omniscient
 
 
 @asynccontextmanager
@@ -57,11 +60,10 @@ app.add_middleware(
 # ------------------------------------------------------------------
 # Routers cloud-safe
 # ------------------------------------------------------------------
-app.include_router(auth.router,      prefix="/api")
-app.include_router(drone.router,     prefix="/api")
-app.include_router(quote.router,     prefix="/api/quote",   tags=["Sales Automation"])
-app.include_router(omniscient.router, prefix="/api",        tags=["OSINT"])
-app.include_router(ballast.router,   prefix="/api/ballast", tags=["Eco-Domination"])
+app.include_router(auth.router,       prefix="/api")
+app.include_router(drone.router,      prefix="/api")
+app.include_router(quote.router,      prefix="/api/quote", tags=["Sales Automation"])
+app.include_router(omniscient.router, prefix="/api",       tags=["OSINT"])
 
 
 # ------------------------------------------------------------------
