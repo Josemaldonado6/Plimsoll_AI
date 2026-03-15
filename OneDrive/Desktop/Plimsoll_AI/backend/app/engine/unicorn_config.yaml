@@ -1,0 +1,19 @@
+# Plimsoll AI: Unicorn Pro+ Configuration
+path: c:/Users/joseu/OneDrive/Desktop/Plimsoll_AI/datasets/coatzacoalcos_v2
+train: train/images
+val: val/images
+test: test/images
+
+# Classes (Multi-Task Vision)
+names:
+  0: draft_mark
+  1: waterline
+  2: hull_rust
+  3: structural_anomaly
+  4: vessel_id_imo
+
+# Metadata for MTV (Multi-Task Vision)
+mtv:
+  architecture: "sovereign-v3"
+  distillation: true
+  teacher: "sam2_b"
