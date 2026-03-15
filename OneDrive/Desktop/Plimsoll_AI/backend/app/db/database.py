@@ -45,7 +45,11 @@ else:
     # Edge / desarrollo local — SQLite
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     DATA_DIR = os.path.join(BASE_DIR, "data")
-    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+    except OSError:
+        # Fallback for serverless read-only environments
+        DATA_DIR = "/tmp"
     DB_PATH = os.path.join(DATA_DIR, "plimsoll.db")
     DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
     _engine_kwargs = {"connect_args": {"check_same_thread": False}}
