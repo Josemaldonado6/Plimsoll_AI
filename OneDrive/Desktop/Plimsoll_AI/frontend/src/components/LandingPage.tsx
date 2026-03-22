@@ -20,12 +20,17 @@
  * constituye un delito federal.
  * -----------------------------------------------------------------------------
  */
-import { ChevronRight, Play, Zap, Anchor, Globe, FileCheck, ArrowRight, Check, Plane } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronRight, Play, Zap, Globe, ArrowRight, Check, Ship, ShieldCheck, BarChart3, Lock, Star, Waves, Cpu, X } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import PricingCalculator from './PricingCalculator';
 import GlobalParticles from './GlobalParticles';
+import { ProtocolExplainer } from './ProtocolExplainer';
+import { ComplianceFramework } from './ComplianceFramework';
+import { BallastMonitor } from './BallastMonitor';
+import { ENTERPRISE_PLANS } from '../services/StripeCommercial';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -37,66 +42,58 @@ interface LandingPageProps {
 
 export default function LandingPage({ onEnterApp }: LandingPageProps) {
     const { t, i18n } = useTranslation();
+    const [showVideoModal, setShowVideoModal] = useState(false);
 
     const changeLanguage = (lng: string) => {
         i18n.changeLanguage(lng);
     }
 
+    const videoSources: Record<string, string> = {
+        'en': '/videos/promo_en.mp4',
+        'es': '/videos/promo_es.mp4',
+        'pt': '/videos/promo_pt.mp4',
+        'zh': '/videos/promo_zh.mp4',
+    };
+
+    // Fallback to English if the exact language isn't found
+    const currentLang = i18n.language.split('-')[0];
+    const promoSrc = videoSources[currentLang] || videoSources['en'];
+
     return (
-        <div className="min-h-screen bg-[#0a192f] text-[#e6f1ff] font-sans selection:bg-[#64ffda] selection:text-[#0a192f] relative overflow-x-hidden">
+        <div className={`min-h-screen bg-[#020617] text-white font-sans selection:bg-yellow-400 selection:text-black relative overflow-x-hidden`}>
             <GlobalParticles />
-            {/* Navigation */}
-            <nav className="fixed top-0 w-full z-50 border-b border-[#64ffda]/10 bg-[#0a192f]/80 backdrop-blur-md">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="relative w-8 h-8">
-                            <div className="absolute inset-0 bg-[#64ffda] blur-md opacity-20 rounded-full"></div>
-                            <img src="/logo.png" alt="Plimsoll Logo" className="w-full h-full object-contain relative z-10 filter brightness-0 invert" />
+
+            {/* STAKEHOLDER HEADER */}
+            <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl">
+                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-yellow-400 blur-lg opacity-20 group-hover:opacity-40 transition-opacity rounded-full"></div>
+                            <img src="/logo.png" alt="Plimsoll Logo" className="w-10 h-10 object-contain relative z-10 filter brightness-200" />
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-[#e6f1ff]">PLIMSOLL AI</span>
+                        <div className="flex flex-col">
+                            <span className="font-black text-xl tracking-tighter text-white">PLIMSOLL <span className="text-yellow-400">AI</span></span>
+                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-500">{t('nav.tagline')}</span>
+                        </div>
                     </div>
-                    <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#8892b0]">
-                        <a href="#features" className="hover:text-[#64ffda] transition-colors">{t('nav.features')}</a>
-                        <a href="#how-it-works" className="hover:text-[#64ffda] transition-colors">{t('nav.methodology')}</a>
-                        <a href="#pricing" className="hover:text-[#64ffda] transition-colors">{t('nav.pricing')}</a>
-                        <div className="flex items-center gap-2 border-l border-[#64ffda]/10 pl-6">
-                            <button
-                                onClick={() => changeLanguage('en')}
-                                className={cn("text-xs font-bold transition-colors", i18n.language?.startsWith('en') ? "text-[#64ffda]" : "text-[#8892b0] hover:text-white")}
-                            >
-                                EN
-                            </button>
-                            <span className="text-[#8892b0]/30">/</span>
-                            <button
-                                onClick={() => changeLanguage('es')}
-                                className={cn("text-xs font-bold transition-colors", i18n.language?.startsWith('es') ? "text-[#64ffda]" : "text-[#8892b0] hover:text-white")}
-                            >
-                                ES
-                            </button>
-                            <span className="text-[#8892b0]/30">/</span>
-                            <button
-                                onClick={() => changeLanguage('pt')}
-                                className={cn("text-xs font-bold transition-colors", i18n.language.startsWith('pt') ? "text-[#64ffda]" : "text-[#8892b0] hover:text-white")}
-                            >
-                                PT
-                            </button>
-                            <span className="text-[#8892b0]/30">/</span>
-                            <button
-                                onClick={() => changeLanguage('zh')}
-                                className={cn("text-xs font-bold transition-colors", i18n.language.startsWith('zh') ? "text-[#64ffda]" : "text-[#8892b0] hover:text-white")}
-                            >
-                                ZH
-                            </button>
+
+                    <div className="hidden lg:flex items-center gap-10 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <a href="#simulator" className="hover:text-yellow-400 transition-colors">{t('nav.pricing')}</a>
+                        <a href="#protocol" className="hover:text-yellow-400 transition-colors">{t('nav.methodology')}</a>
+                        <a href="#compliance" className="hover:text-yellow-400 transition-colors">{t('nav.sys_config')}</a>
+
+                        <div className="h-4 w-px bg-white/10" />
+
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => changeLanguage('en')} className={cn("transition-colors", i18n.language.startsWith('en') ? "text-yellow-400" : "hover:text-white")}>EN</button>
+                            <button onClick={() => changeLanguage('es')} className={cn("transition-colors", i18n.language.startsWith('es') ? "text-yellow-400" : "hover:text-white")}>ES</button>
+                            <button onClick={() => changeLanguage('pt')} className={cn("transition-colors", i18n.language.startsWith('pt') ? "text-yellow-400" : "hover:text-white")}>PT</button>
+                            <button onClick={() => changeLanguage('zh')} className={cn("transition-colors", i18n.language.startsWith('zh') ? "text-yellow-400" : "hover:text-white")}>ZH</button>
                         </div>
+
                         <button
                             onClick={onEnterApp}
-                            className="text-[#e6f1ff] hover:text-[#64ffda] transition-colors"
-                        >
-                            {t('nav.login')}
-                        </button>
-                        <button
-                            onClick={onEnterApp}
-                            className="bg-[#64ffda] text-[#0a192f] px-4 py-2 rounded-sm font-bold hover:bg-[#64ffda]/90 transition-colors shadow-[0_0_15px_rgba(100,255,218,0.3)]"
+                            className="bg-yellow-400 text-black px-6 py-2.5 rounded-sm font-black hover:bg-yellow-300 transition-all shadow-[0_0_30px_rgba(253,224,47,0.2)] active:scale-95"
                         >
                             {t('nav.dashboard')}
                         </button>
@@ -104,249 +101,439 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
-                <div className="absolute inset-0 z-0 opacity-20">
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#0a192f]/0 via-[#0a192f]/80 to-[#0a192f]" />
-                    {/* Placeholder for video/image background - would be replaced by the actual asset */}
-                    <div className="absolute inset-0 bg-[url('/plimsoll_hero_scan.png')] bg-cover bg-center mix-blend-overlay"></div>
-                    <div className="absolute inset-0 bg-[#0a192f]/90"></div>
-                </div>
-
-                <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#64ffda]/20 bg-[#112240]/50 text-xs font-mono text-[#64ffda] mb-8 animate-fade-in-up">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#64ffda] opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#64ffda]"></span>
-                        </span>
-                        {t('landing.hero_badge')}
+            {/* HERO: THE TRUTH OF THE WATERLINE */}
+            <section className="relative pt-40 pb-32 md:pt-64 md:pb-48 min-h-[90vh] flex items-center">
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                    {/* Background Video */}
+                    <div className="absolute inset-0 z-0">
+                        <video
+                            src={promoSrc}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            className="w-full h-full object-cover opacity-40 scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/80 via-[#020617]/40 to-[#020617]" />
+                        <div className="absolute inset-0 bg-yellow-400/5 mix-blend-overlay" />
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 text-[#e6f1ff] max-w-4xl mx-auto leading-tight">
-                        {t('landing.hero_title_1')} <br /> <span className="text-[#64ffda]">{t('landing.hero_title_2')}</span>
-                    </h1>
+                    <div className="absolute inset-0 bg-[url('/plimsoll_hero_scan.png')] bg-cover bg-center opacity-10 mix-blend-luminosity"></div>
 
-                    <p className="text-xl text-[#8892b0] max-w-2xl mx-auto mb-10 leading-relaxed">
-                        {t('landing.hero_subtitle')}
-                        <br />
-                        {t('landing.hero_sub_2')}
-                    </p>
-
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-                        <button
-                            onClick={onEnterApp}
-                            className="h-12 px-8 rounded-sm bg-[#64ffda] text-[#0a192f] font-bold hover:bg-[#64ffda]/90 transition-all flex items-center gap-2 group shadow-[0_0_20px_rgba(100,255,218,0.4)]"
-                        >
-                            {t('landing.cta_trial')}
-                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </button>
-                        <button className="h-12 px-8 rounded-sm border border-[#64ffda]/20 text-[#64ffda] hover:bg-[#64ffda]/10 transition-all flex items-center gap-2 font-mono text-sm">
-                            <Play className="w-4 h-4" /> {t('landing.cta_demo')}
-                        </button>
-                    </div>
+                    {/* Industrial Grid Overlay */}
+                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
                 </div>
-            </section>
 
-            {/* Social Proof */}
-            <section className="py-12 border-y border-[#64ffda]/5 bg-[#112240]/30">
-                <div className="max-w-7xl mx-auto px-6 text-center">
-                    <p className="text-xs text-[#8892b0] mb-8 uppercase tracking-widest font-mono">{t('landing.social_proof')}</p>
-                    <div className="flex flex-wrap justify-center gap-12 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-                        {/* Semantic representation of logos */}
-                        <span className="text-xl font-bold font-serif text-[#e6f1ff]">IMO</span>
-                        <span className="text-xl font-bold font-sans text-[#e6f1ff]">ISO 9001</span>
-                        <span className="text-xl font-bold font-mono text-[#e6f1ff]">BIMCO</span>
-                        <span className="text-xl font-bold font-serif italic text-[#e6f1ff]">Lloyd's Register</span>
-                        <span className="text-xl font-bold text-[#e6f1ff]">DNV</span>
-                    </div>
-                </div>
-            </section>
+                <div className="relative z-10 max-w-7xl mx-auto px-6">
+                    <div className="max-w-4xl">
+                        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-[10px] font-black uppercase tracking-[0.3em] text-yellow-400 mb-10">
+                            <Lock size={12} strokeWidth={3} />
+                            {t('landing.hero_badge')}
+                        </div>
 
-            {/* Problem vs Solution */}
-            <section className="py-24 md:py-32" id="features">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid md:grid-cols-2 gap-16 items-center">
-                        <div>
-                            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-[#e6f1ff]">{t('landing.feat_title_1')} <br /><span className="text-red-400 line-through decoration-red-500/50">{t('landing.feat_title_2')}</span></h2>
-                            <p className="text-[#8892b0] text-lg mb-8">
-                                {t('landing.feat_desc')}
+                        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
+                            {t('landing.stakeholder_hero_title_1')} <span className="text-yellow-400">{t('landing.stakeholder_hero_title_2').split(' ')[0]}</span> {t('landing.stakeholder_hero_title_2').split(' ').slice(1).join(' ')}
+                        </h1>
+
+                        <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mb-6 font-medium leading-relaxed">
+                            {t('landing.stakeholder_hero_subtitle')}
+                        </p>
+
+                        <div className="flex items-center gap-4 mb-12 p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl w-fit">
+                            <div className="bg-yellow-400 p-2 rounded-lg">
+                                <Zap size={20} className="text-black fill-black" />
+                            </div>
+                            <p className="text-yellow-400 font-black text-sm uppercase tracking-widest animate-pulse">
+                                {t('landing.hero_sub_2')}
                             </p>
-
-                            <div className="space-y-6">
-                                <div className="p-6 rounded-lg bg-[#112240] border border-[#f87171]/20 hover:border-[#f87171]/50 transition-colors group">
-                                    <div className="flex items-baseline justify-between mb-2">
-                                        <h3 className="text-xl font-semibold text-[#8892b0] group-hover:text-red-400 transition-colors">{t('landing.feat_old')}</h3>
-                                        <span className="text-xs text-[#f87171] border border-[#f87171]/20 px-2 py-1 rounded">{t('landing.feat_risk')}</span>
-                                    </div>
-                                    <ul className="space-y-2 text-[#8892b0] text-sm font-mono">
-                                        <li className="flex items-center gap-2"><span className="text-[#f87171]">×</span> {t('landing.feat_old_1')}</li>
-                                        <li className="flex items-center gap-2"><span className="text-[#f87171]">×</span> {t('landing.feat_old_2')}</li>
-                                        <li className="flex items-center gap-2"><span className="text-[#f87171]">×</span> {t('landing.feat_old_3')}</li>
-                                        <li className="flex items-center gap-2"><span className="text-[#f87171]">×</span> {t('landing.feat_old_4')}</li>
-                                    </ul>
-                                </div>
-
-                                <div className="p-6 rounded-lg bg-[#112240] border border-[#64ffda]/20 relative overflow-hidden group shadow-[0_0_30px_rgba(100,255,218,0.05)]">
-                                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <Anchor className="w-24 h-24 text-[#64ffda]" />
-                                    </div>
-                                    <div className="flex items-baseline justify-between mb-2">
-                                        <h3 className="text-xl font-semibold text-[#e6f1ff] group-hover:text-[#64ffda] transition-colors">{t('landing.feat_new')}</h3>
-                                        <span className="text-xs text-[#64ffda] border border-[#64ffda]/20 px-2 py-1 rounded bg-[#64ffda]/10">{t('landing.feat_audit')}</span>
-                                    </div>
-                                    <ul className="space-y-2 text-[#e6f1ff] text-sm font-mono">
-                                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#64ffda]" /> {t('landing.feat_new_1')}</li>
-                                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#64ffda]" /> {t('landing.feat_new_2')}</li>
-                                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#64ffda]" /> {t('landing.feat_new_3')}</li>
-                                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#64ffda]" /> {t('landing.feat_new_4')}</li>
-                                    </ul>
-                                </div>
-                            </div>
                         </div>
 
-                        <div className="relative">
-                            <div className="absolute -inset-4 bg-gradient-to-r from-[#64ffda] to-blue-600 rounded-2xl opacity-10 blur-2xl animate-pulse"></div>
-                            <div className="relative bg-[#020c1b] border border-[#64ffda]/20 rounded-xl p-6 aspect-square flex items-center justify-center shadow-2xl">
-                                {/* Abstract Visualization of AI Processing */}
-                                <div className="text-center">
-                                    <div className="w-32 h-32 mx-auto mb-6 rounded-full border-4 border-[#64ffda]/30 border-t-[#64ffda] animate-spin"></div>
-                                    <div className="font-mono text-[#64ffda] text-lg tracking-widest">{t('landing.process_hull')}</div>
-                                    <div className="text-[#8892b0] text-sm mt-2 font-mono">{t('landing.process_inf')}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* How It Works */}
-            <section className="py-24 bg-[#112240]/20" id="how-it-works">
-                <div className="max-w-7xl mx-auto px-6 text-center">
-                    <h2 className="text-3xl font-bold mb-16 text-[#e6f1ff]">{t('landing.how_title')}</h2>
-
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="relative p-8 group hover:bg-[#112240] rounded-xl transition-colors border border-transparent hover:border-[#64ffda]/10">
-                            <div className="w-16 h-16 mx-auto bg-[#112240] rounded-lg flex items-center justify-center mb-6 border border-[#64ffda]/10 group-hover:border-[#64ffda]/50 group-hover:scale-110 transition-all shadow-lg">
-                                <Plane className="w-8 h-8 text-[#64ffda]" />
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2 text-[#e6f1ff]">{t('landing.step_1_title')}</h3>
-                            <p className="text-[#8892b0] text-sm">{t('landing.step_1_desc')}</p>
-                            <ArrowRight className="hidden md:block absolute top-12 -right-4 text-[#64ffda]/20 w-8 h-8" />
-                        </div>
-
-                        <div className="p-8 group hover:bg-[#112240] rounded-xl transition-colors border border-transparent hover:border-[#64ffda]/10">
-                            <div className="w-16 h-16 mx-auto bg-[#112240] rounded-lg flex items-center justify-center mb-6 border border-[#64ffda]/10 group-hover:border-[#64ffda]/50 group-hover:scale-110 transition-all shadow-lg">
-                                <Zap className="w-8 h-8 text-[#64ffda]" />
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2 text-[#e6f1ff]">{t('landing.step_2_title')}</h3>
-                            <p className="text-[#8892b0] text-sm">{t('landing.step_2_desc')}</p>
-                            <ArrowRight className="hidden md:block absolute top-12 -right-4 text-[#64ffda]/20 w-8 h-8" />
-                        </div>
-
-                        <div className="p-8 group hover:bg-[#112240] rounded-xl transition-colors border border-transparent hover:border-[#64ffda]/10">
-                            <div className="w-16 h-16 mx-auto bg-[#112240] rounded-lg flex items-center justify-center mb-6 border border-[#64ffda]/10 group-hover:border-[#64ffda]/50 group-hover:scale-110 transition-all shadow-lg">
-                                <FileCheck className="w-8 h-8 text-[#64ffda]" />
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2 text-[#e6f1ff]">{t('landing.step_3_title')}</h3>
-                            <p className="text-[#8892b0] text-sm">{t('landing.step_3_desc')}</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Pricing */}
-            <section className="py-24" id="pricing">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl font-bold mb-4 text-[#e6f1ff]">{t('landing.pricing_title')}</h2>
-                        <p className="text-[#8892b0]">{t('landing.pricing_desc')}</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                        <div className="p-8 rounded-2xl bg-[#112240] border border-[#64ffda]/5 flex flex-col hover:border-[#64ffda]/20 transition-all">
-                            <div className="mb-4">
-                                <span className="text-sm font-bold text-[#8892b0] uppercase tracking-wider font-mono">{t('landing.price_pay')}</span>
-                            </div>
-                            <div className="text-4xl font-bold mb-2 text-[#e6f1ff]">$50<span className="text-xl font-normal text-[#8892b0]">{t('landing.price_rep')}</span></div>
-                            <p className="text-[#8892b0] text-sm mb-8">{t('landing.price_pay_desc')}</p>
-
-                            <ul className="space-y-4 mb-8 flex-1">
-                                <li className="flex gap-3 text-sm text-[#e6f1ff]"><Check className="w-5 h-5 text-[#64ffda]" /> {t('landing.price_pay_1')}</li>
-                                <li className="flex gap-3 text-sm text-[#e6f1ff]"><Check className="w-5 h-5 text-[#64ffda]" /> {t('landing.price_pay_2')}</li>
-                                <li className="flex gap-3 text-sm text-[#e6f1ff]"><Check className="w-5 h-5 text-[#64ffda]" /> {t('landing.price_pay_3')}</li>
-                            </ul>
-
-                            <button className="w-full py-4 rounded-sm border border-[#64ffda] text-[#64ffda] hover:bg-[#64ffda]/10 transition-colors font-bold font-mono">
-                                {t('landing.btn_survey')}
+                        <div className="flex flex-col sm:flex-row items-center gap-6 mb-24">
+                            <button
+                                onClick={onEnterApp}
+                                className="h-16 px-10 rounded-sm bg-yellow-400 text-black font-black text-sm uppercase tracking-[0.2em] transform hover:scale-105 transition-all shadow-2xl flex items-center gap-3 w-full sm:w-auto justify-center"
+                            >
+                                {t('nav.radar_survey')}
+                                <ChevronRight size={18} strokeWidth={3} />
+                            </button>
+                            <button
+                                onClick={() => setShowVideoModal(true)}
+                                className="h-16 px-10 rounded-sm border-2 border-white/10 text-white font-black text-sm uppercase tracking-[0.2em] hover:bg-white/5 transition-all flex items-center gap-3 w-full sm:w-auto justify-center"
+                            >
+                                <Play size={16} fill="white" />
+                                {t('landing.cta_demo')}
                             </button>
                         </div>
 
-                        {/* Dynamic Calculator */}
-                        <PricingCalculator />
+                        {/* STRATEGIC ADVANTAGES GRID */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
+                            {[
+                                {
+                                    icon: <Zap className="w-6 h-6 text-yellow-400" />,
+                                    title: t('landing.advantage_90s_title'),
+                                    desc: t('landing.advantage_90s_desc')
+                                },
+                                {
+                                    icon: <Waves className="w-6 h-6 text-yellow-400" />,
+                                    title: t('landing.advantage_anchorage_title'),
+                                    desc: t('landing.advantage_anchorage_desc')
+                                },
+                                {
+                                    icon: <Cpu className="w-6 h-6 text-yellow-400" />,
+                                    title: t('landing.advantage_plc_title'),
+                                    desc: t('landing.advantage_plc_desc')
+                                }
+                            ].map((adv, idx) => (
+                                <div key={idx} className="group p-8 bg-slate-900/40 border border-white/5 rounded-2xl hover:border-yellow-400/30 transition-all duration-500">
+                                    <div className="mb-6 bg-yellow-400/10 w-fit p-4 rounded-xl group-hover:scale-110 group-hover:bg-yellow-400/20 transition-all duration-500">
+                                        {adv.icon}
+                                    </div>
+                                    <h3 className="text-xl font-black mb-4 uppercase tracking-tighter italic text-white group-hover:text-yellow-400 transition-colors">
+                                        {adv.title}
+                                    </h3>
+                                    <p className="text-slate-400 font-medium leading-relaxed text-sm">
+                                        {adv.desc}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* Hero CTA */}
-            <section className="py-20 text-center border-t border-[#64ffda]/5">
-                <div className="max-w-4xl mx-auto px-6">
-                    <h2 className="text-4xl font-bold mb-8 text-[#e6f1ff]">{t('landing.cta_final')}</h2>
-                    <button
-                        onClick={onEnterApp}
-                        className="h-14 px-10 rounded-sm bg-[#64ffda] text-[#0a192f] font-bold text-lg hover:bg-[#64ffda]/90 transition-all shadow-[0_0_20px_rgba(100,255,218,0.4)]"
-                    >
-                        {t('landing.cta_final_btn')}
-                    </button>
+            {/* TRUST: PORT AUTHORITY ACCREDITATION */}
+            <div className="border-y border-white/5 bg-slate-900/40 py-12">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 max-w-[150px] leading-tight mb-8 md:mb-0">{t('landing.trust_accreditation')}</p>
+                        <div className="flex flex-wrap justify-center gap-16 md:gap-24">
+                            <span className="text-2xl font-black tracking-tighter cursor-help transition-all hover:text-yellow-400" title={t('landing.cert_iso')}>ISO 17020</span>
+                            <span className="text-2xl font-black tracking-tighter cursor-help transition-all hover:text-yellow-400" title={t('landing.cert_bimco')}>BIMCO</span>
+                            <span className="text-2xl font-black tracking-tighter cursor-help transition-all hover:text-yellow-400" title={t('landing.cert_imo')}>IMO v2.1</span>
+                            <span className="text-2xl font-black tracking-tighter cursor-help transition-all hover:text-yellow-400" title={t('landing.cert_hse')}>HSE-SAFE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* VALUE PROP: THE CFO MODULE */}
+            <section className="py-32 bg-gradient-to-b from-[#020617] to-slate-950" id="protocol">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="grid lg:grid-cols-2 gap-24 items-center">
+                        <div className="space-y-12">
+                            <div>
+                                <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-6 uppercase">
+                                    {t('landing.cfo_title').split(' ').slice(0, -1).join(' ')} <span className="text-red-500">{t('landing.cfo_title').split(' ').slice(-1)}</span>
+                                </h1>
+                                <p className="text-lg text-slate-400 font-medium">
+                                    {t('landing.cfo_desc')}
+                                </p>
+                            </div>
+
+                            <div className="grid gap-4">
+                                <div className="p-8 rounded-2xl bg-slate-900/50 border border-white/5 hover:border-yellow-400/30 transition-all group">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="p-3 bg-red-500/10 rounded-xl text-red-500 group-hover:bg-red-500/20 transition-all">
+                                            <Zap size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-sm uppercase tracking-widest">{t('landing.legacy_title')}</h3>
+                                            <p className="text-xs text-slate-500">{t('landing.legacy_subtitle')}</p>
+                                        </div>
+                                    </div>
+                                    <ul className="space-y-3 text-sm font-bold text-slate-400">
+                                        <li className="flex items-center gap-3">× {t('landing.legacy_1')}</li>
+                                        <li className="flex items-center gap-3">× {t('landing.legacy_2')}</li>
+                                        <li className="flex items-center gap-3 text-red-400">× {t('landing.legacy_3')}</li>
+                                    </ul>
+                                </div>
+
+                                <div className="p-8 rounded-2xl bg-yellow-400 text-black border border-white/5 transform hover:-translate-y-1 transition-all shadow-2xl">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="p-3 bg-black/10 rounded-xl">
+                                            <ShieldCheck size={24} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-sm uppercase tracking-widest">{t('landing.protocol_title')}</h3>
+                                            <p className="text-xs opacity-60">{t('landing.protocol_subtitle')}</p>
+                                        </div>
+                                    </div>
+                                    <ul className="space-y-3 text-sm font-black">
+                                        <li className="flex items-center gap-3"><Check size={16} strokeWidth={3} /> {t('landing.protocol_1')}</li>
+                                        <li className="flex items-center gap-3"><Check size={16} strokeWidth={3} /> {t('landing.protocol_2')}</li>
+                                        <li className="flex items-center gap-3 underline decoration-black/30">✓ {t('landing.protocol_3')}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Visual Asset Section */}
+                        <div className="relative group">
+                            <div className="absolute -inset-10 bg-yellow-400/10 blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative aspect-square rounded-3xl border border-white/10 bg-slate-900 overflow-hidden shadow-2xl">
+                                <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
+                                    <div className="w-48 h-48 mb-8 relative">
+                                        <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-full animate-ping" />
+                                        <div className="absolute inset-4 border-4 border-yellow-400/40 rounded-full animate-pulse" />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <BarChart3 size={64} className="text-yellow-400" />
+                                        </div>
+                                    </div>
+                                    <h4 className="text-2xl font-black mb-4 uppercase tracking-tighter">{t('landing.tech_recon_title')}</h4>
+                                    <p className="text-slate-500 text-sm font-medium">{t('landing.tech_recon_desc')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="bg-[#020c1b] pt-16 pb-8 text-sm">
-                <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-12">
-                    <div className="col-span-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-6 h-6 bg-[#64ffda] rounded-sm flex items-center justify-center text-[#0a192f]">
-                                <Anchor className="w-4 h-4" />
-                            </div>
-                            <span className="font-bold tracking-tight text-[#e6f1ff]">PLIMSOLL AI</span>
+            {/* SIMULATOR: ROI FOR STAKEHOLDERS */}
+            <section className="py-32 border-t border-white/5" id="simulator">
+                <div className="max-w-7xl mx-auto px-6 text-center">
+                    <div className="mb-24">
+                        <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-6">{t('landing.simulator_title_1')} <span className="text-yellow-400 text-stroke-white text-transparent">{t('landing.simulator_title_2')}</span></h2>
+                        <p className="text-xl text-slate-400 max-w-2xl mx-auto font-medium leading-relaxed">
+                            {t('landing.simulator_desc')}
+                        </p>
+                    </div>
+
+                    <PricingCalculator />
+                </div>
+            </section>
+
+            {/* SUBSCRIPTION TIERS: LATAM STRATEGY */}
+            <section className="py-32 bg-slate-950/30 border-t border-white/5">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="text-center mb-20">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-[10px] font-black text-yellow-400 uppercase tracking-widest mb-4">
+                            <Star size={12} fill="currentColor" />
+                            {t('enterprise.enterprise_grade', 'Enterprise Grade')}
                         </div>
-                        <p className="text-[#8892b0] max-w-xs">
-                            {t('landing.footer_desc')}
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter uppercase mb-4">
+                            {t('enterprise.upgrade_title')}
+                        </h2>
+                        <p className="text-slate-500 font-medium max-w-2xl mx-auto">
+                            {t('enterprise.upgrade_desc')}
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {ENTERPRISE_PLANS.map((plan) => (
+                            <div
+                                key={plan.id}
+                                className={cn(
+                                    "relative rounded-[2.5rem] p-8 md:p-10 border transition-all duration-500 overflow-hidden group",
+                                    plan.highlight
+                                        ? "bg-yellow-400 border-yellow-400 text-black scale-105 shadow-[0_0_50px_rgba(253,224,47,0.15)] z-10"
+                                        : "bg-white/5 border-white/10 text-white hover:border-yellow-400/30"
+                                )}
+                            >
+                                {plan.highlight && (
+                                    <div className="absolute top-6 right-8 bg-black text-yellow-400 text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                                        {t('enterprise.most_popular')}
+                                    </div>
+                                )}
+
+                                <div className="mb-8">
+                                    <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-2 opacity-60">
+                                        {plan.name}
+                                    </h3>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl font-black tracking-tighter">
+                                            ${plan.price}
+                                        </span>
+                                        <span className="text-[10px] font-bold uppercase opacity-60">
+                                            /{plan.interval === 'month' ? 'mo' : 'yr'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <ul className="space-y-4 mb-10">
+                                    {plan.features.map((feature, i) => (
+                                        <li key={i} className="flex items-start gap-3">
+                                            <div className={cn("mt-1 p-0.5 rounded-full", plan.highlight ? "bg-black/10" : "bg-yellow-400/20")}>
+                                                <Check size={10} strokeWidth={4} className={plan.highlight ? "text-black" : "text-yellow-400"} />
+                                            </div>
+                                            <span className="text-xs font-bold leading-tight uppercase tracking-tight">
+                                                {feature}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <button
+                                    onClick={onEnterApp}
+                                    className={cn(
+                                        "w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2",
+                                        plan.highlight
+                                            ? "bg-black text-yellow-400 hover:bg-slate-900"
+                                            : "bg-yellow-400 text-black hover:bg-yellow-300 shadow-xl shadow-yellow-400/10"
+                                    )}
+                                >
+                                    {t('enterprise.deploy_solution')}
+                                    <ArrowRight size={14} strokeWidth={3} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-16 text-center">
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">
+                            Confidential LATAM Regional Pricing // Industrial Grade Compliance
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            {/* ECO-DOMINATION: SMART BALLAST CONTROL */}
+            <section className="py-32 bg-slate-950/50 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="flex flex-col lg:flex-row items-end justify-between mb-20 gap-8">
+                        <div className="max-w-2xl text-left">
+                            <div className="inline-flex items-center gap-2 text-blue-400 font-black text-[10px] uppercase tracking-[0.4em] mb-4">
+                                <Zap size={14} /> {t('landing.eco_domination')}
+                            </div>
+                            <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-none uppercase">
+                                {t('landing.hydrostatic_opt')}
+                            </h2>
+                        </div>
+                        <p className="text-slate-500 font-medium max-w-sm lg:text-right leading-relaxed">
+                            {t('landing.ballast_desc', 'Reduce fuel consumption by up to 12% through real-time PLC ballast adjustments based on neural hydrodynamic feedback.')}
+                        </p>
+                    </div>
+
+                    <BallastMonitor />
+                </div>
+            </section>
+
+            {/* TECHNICAL AUTHORITY: THE GLOSSARY */}
+            <section className="py-32 bg-[#020617] relative" id="compliance">
+                <div className="max-w-7xl mx-auto px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-4">{t('landing.tech_glossary_title')}</h2>
+                        <p className="text-slate-500 font-medium">{t('landing.tech_glossary_subtitle')}</p>
+                    </div>
+
+                    <div className="max-w-5xl mx-auto">
+                        <ProtocolExplainer />
+                    </div>
+                </div>
+            </section>
+
+            <ComplianceFramework />
+
+            {/* FINAL CLOSURE: BOOKING SLOTS */}
+            <section className="py-40 border-t border-white/5 bg-slate-950 relative overflow-hidden text-center">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-yellow-400/50 to-transparent" />
+
+                <div className="max-w-4xl mx-auto px-6">
+                    <div className="inline-flex items-center gap-2 text-yellow-500 font-bold text-[10px] uppercase tracking-[0.4em] mb-8">
+                        <Ship size={14} /> {t('landing.final_cta_slots')}
+                    </div>
+                    <h2 className="text-5xl md:text-8xl font-black tracking-tighter mb-12 uppercase leading-[0.85]">
+                        {t('landing.final_cta_title_1')} <br /> <span className="text-transparent" style={{ WebkitTextStroke: '2px rgba(253,224,47,0.4)' }}>{t('landing.final_cta_title_2')}</span>
+                    </h2>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+                        <button
+                            onClick={onEnterApp}
+                            className="h-20 px-12 rounded-sm bg-yellow-400 text-black font-black text-lg uppercase tracking-[0.2em] transform hover:scale-110 active:scale-95 transition-all shadow-2xl flex items-center gap-4"
+                        >
+                            {t('landing.cta_book_demo')}
+                            <ArrowRight size={20} strokeWidth={3} />
+                        </button>
+                        <div className="text-left">
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">{t('landing.direct_line')}</p>
+                            <p className="text-xl font-black text-white px-1">SUPPORT@PLIMSOLL.AI</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* FOOTER: INDUSTRIAL ARCHIVE */}
+            <footer className="bg-slate-950 pt-32 pb-12 border-t border-white/5">
+                <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-20 mb-20">
+                    <div className="col-span-2 space-y-8">
+                        <div className="flex items-center gap-3">
+                            <img src="/logo.png" alt="Logo" className="w-8 h-8 filter brightness-200" />
+                            <span className="font-black text-2xl tracking-tighter text-white">PLIMSOLL <span className="text-yellow-400 text-stroke-white text-transparent">AI</span></span>
+                        </div>
+                        <p className="text-slate-500 max-w-sm font-medium leading-relaxed">
+                            {t('landing.footer_motto')}
                         </p>
                     </div>
                     <div>
-                        <h4 className="font-bold mb-4 text-[#e6f1ff]">{t('landing.footer_prod')}</h4>
-                        <ul className="space-y-2 text-[#8892b0]">
-                            <li><a href="#" className="hover:text-[#64ffda]">{t('nav.features')}</a></li>
-                            <li><a href="#" className="hover:text-[#64ffda]">{t('nav.methodology')}</a></li>
-                            <li><a href="#" className="hover:text-[#64ffda]">API</a></li>
+                        <h4 className="font-black text-[10px] uppercase tracking-widest text-white mb-6">{t('landing.footer_tech_title')}</h4>
+                        <ul className="space-y-4 text-xs font-bold text-slate-500">
+                            <li><a href="#" className="hover:text-yellow-400 transition-colors">{t('landing.footer_tech_1')}</a></li>
+                            <li><a href="#" className="hover:text-yellow-400 transition-colors">{t('landing.footer_tech_2')}</a></li>
+                            <li><a href="#" className="hover:text-yellow-400 transition-colors">{t('landing.footer_tech_3')}</a></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="font-bold mb-4 text-[#e6f1ff]">{t('landing.footer_comp')}</h4>
-                        <ul className="space-y-2 text-[#8892b0]">
-                            <li><a href="#" className="hover:text-[#64ffda]">{t('landing.footer_comp')}</a></li>
-                            <li><a href="#" className="hover:text-[#64ffda]">Whitepaper</a></li>
-                            <li><a href="#" className="hover:text-[#64ffda]">{t('landing.footer_legal')}</a></li>
+                        <h4 className="font-black text-[10px] uppercase tracking-widest text-white mb-6">{t('landing.footer_comp_title')}</h4>
+                        <ul className="space-y-4 text-xs font-bold text-slate-500">
+                            <li><a href="#" className="hover:text-yellow-400 transition-colors">{t('landing.footer_comp_1')}</a></li>
+                            <li><a href="#" className="hover:text-yellow-400 transition-colors">{t('landing.footer_comp_2')}</a></li>
+                            <li><a href="#" className="hover:text-yellow-400 transition-colors">{t('landing.footer_comp_3')}</a></li>
                         </ul>
                     </div>
                 </div>
-                <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-[#112240] text-[#8892b0] flex flex-col md:flex-row justify-between items-center bg-[#020c1b]">
-                    <p>{t('landing.footer_rights')}</p>
-                    <div className="flex gap-6 mt-4 md:mt-0 font-mono text-xs">
-                        <div className="flex items-center gap-2">
-                            <Globe className="w-3 h-3 text-[#64ffda]" />
-                            <a href="#" onClick={(e) => { e.preventDefault(); changeLanguage('en'); }} className={i18n.language.startsWith('en') ? "text-[#64ffda]" : "hover:text-white"}>English</a>
-                            <span className="opacity-30">|</span>
-                            <a href="#" onClick={(e) => { e.preventDefault(); changeLanguage('es'); }} className={i18n.language.startsWith('es') ? "text-[#64ffda]" : "hover:text-white"}>Español</a>
-                            <span className="opacity-30">|</span>
-                            <a href="#" onClick={(e) => { e.preventDefault(); changeLanguage('pt'); }} className={i18n.language.startsWith('pt') ? "text-[#64ffda]" : "hover:text-white"}>Português</a>
-                            <span className="opacity-30">|</span>
-                            <a href="#" onClick={(e) => { e.preventDefault(); changeLanguage('zh'); }} className={i18n.language.startsWith('zh') ? "text-[#64ffda]" : "hover:text-white"}>中文</a>
-                        </div>
+
+                <div className="max-w-7xl mx-auto px-6 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-700">
+                    <p>{t('landing.footer_all_rights')}</p>
+                    <div className="flex gap-8 mt-6 md:mt-0 items-center">
+                        <Globe size={14} className="text-yellow-400/30" />
+                        <span onClick={() => changeLanguage('en')} className={cn("cursor-pointer transition-colors font-mono", i18n.language.startsWith('en') ? "text-yellow-400" : "hover:text-white")}>EN</span>
+                        <span onClick={() => changeLanguage('es')} className={cn("cursor-pointer transition-colors font-mono", i18n.language.startsWith('es') ? "text-yellow-400" : "hover:text-white")}>ES</span>
+                        <span onClick={() => changeLanguage('pt')} className={cn("cursor-pointer transition-colors font-mono", i18n.language.startsWith('pt') ? "text-yellow-400" : "hover:text-white")}>PT</span>
+                        <span onClick={() => changeLanguage('zh')} className={cn("cursor-pointer transition-colors font-mono", i18n.language.startsWith('zh') ? "text-yellow-400" : "hover:text-white")}>ZH</span>
                     </div>
                 </div>
             </footer>
+
+            {/* VIDEO MODAL: INDUSTRIAL THEATER */}
+            {showVideoModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+                    <div
+                        className="absolute inset-0 bg-[#020617]/95 backdrop-blur-2xl"
+                        onClick={() => setShowVideoModal(false)}
+                    />
+
+                    <div className="relative w-full max-w-6xl aspect-video rounded-3xl border border-white/10 bg-black overflow-hidden shadow-[0_0_100px_rgba(253,224,47,0.1)] group">
+                        {/* Close button */}
+                        <button
+                            onClick={() => setShowVideoModal(false)}
+                            className="absolute top-6 right-6 z-20 p-3 rounded-full bg-black/50 text-white hover:bg-yellow-400 hover:text-black transition-all border border-white/10"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        {/* Video Metadata / Industry Tag */}
+                        <div className="absolute top-6 left-6 z-20 flex items-center gap-3 px-4 py-2 rounded-lg bg-black/50 border border-white/10 backdrop-blur-md">
+                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70">
+                                {t('nav.tagline')} // LIVE_DEMO // {i18n.language.toUpperCase()}
+                            </span>
+                        </div>
+
+                        <video
+                            src={promoSrc}
+                            autoPlay
+                            controls
+                            className="w-full h-full object-cover"
+                        >
+                            Your browser does not support the video tag.
+                        </video>
+
+                        {/* Scanner Decoration Overlay */}
+                        <div className="absolute inset-0 pointer-events-none border-[20px] border-black/5 opacity-50" />
+                        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent animate-scan-slow" />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

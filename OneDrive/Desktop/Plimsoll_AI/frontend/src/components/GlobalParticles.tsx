@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function GlobalParticles() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,7 +44,7 @@ export default function GlobalParticles() {
                 if (!ctx) return;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(100, 255, 218, 0.5)';
+                ctx.fillStyle = 'rgba(253, 224, 71, 0.5)';
                 ctx.fill();
             }
         }
@@ -68,7 +68,7 @@ export default function GlobalParticles() {
 
                     if (distance < connectionDistance) {
                         ctx.beginPath();
-                        ctx.strokeStyle = `rgba(100, 255, 218, ${1 - distance / connectionDistance})`;
+                        ctx.strokeStyle = `rgba(253, 224, 71, ${1 - distance / connectionDistance})`;
                         ctx.lineWidth = 0.5;
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(p2.x, p2.y);
