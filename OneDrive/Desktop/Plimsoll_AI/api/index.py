@@ -32,34 +32,11 @@ from app.db.models import Survey
 # EXCLUIDOS del cloud (requieren hardware físico o librerías Edge-only):
 #   - ballast  → BallastPLCBridge usa pymodbus (PLC físico en el barco)
 #   - endpoints → AIDraftSurveyor usa OpenVINO INT8 (NPU en la tablet)
-from fastapi.responses import JSONResponse
-import traceback
+from app.api.auth import router as auth_router
+from app.api.drone import router as drone_router
+from app.api.quote import router as quote_router
+from app.api.omniscient import router as omniscient_router
 
-# SAFE IMPORT BLOCK FOR DIAGNOSTICS
-DEBUG_INFO = {}
-try:
-    DEBUG_INFO['sys_path'] = sys.path
-    backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
-    DEBUG_INFO['backend_exists'] = os.path.exists(backend_path)
-    if os.path.exists(backend_path):
-        DEBUG_INFO['backend_dirs'] = os.listdir(backend_path)
-        app_path = os.path.join(backend_path, "app")
-        if os.path.exists(app_path):
-            DEBUG_INFO['app_dirs'] = os.listdir(app_path)
-            api_path = os.path.join(app_path, "api")
-            if os.path.exists(api_path):
-                DEBUG_INFO['api_dirs'] = os.listdir(api_path)
-    
-    from app.api.auth import router as auth_router
-    from app.api.drone import router as drone_router
-    from app.api.quote import router as quote_router
-    from app.api.omniscient import router as omniscient_router
-    ROUTERS_LOADED = True
-except Exception as e:
-    ROUTERS_LOADED = False
-    DEBUG_INFO['error_type'] = type(e).__name__
-    DEBUG_INFO['error_msg'] = str(e)
-    DEBUG_INFO['traceback'] = traceback.format_exc()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -86,15 +63,10 @@ app.add_middleware(
 # ------------------------------------------------------------------
 # Routers cloud-safe
 # ------------------------------------------------------------------
-if ROUTERS_LOADED:
-    app.include_router(auth_router,       prefix="/api")
-    app.include_router(drone_router,      prefix="/api")
-    app.include_router(quote_router,      prefix="/api/quote", tags=["Sales Automation"])
-    app.include_router(omniscient_router, prefix="/api",       tags=["OSINT"])
-else:
-    @app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"])
-    async def catch_all(path_name: str):
-        return JSONResponse(status_code=500, content={"error": "ROUTER_IMPORT_FAILED", "debug": DEBUG_INFO})
+app.include_router(auth_router,       prefix="/api")
+app.include_router(drone_router,      prefix="/api")
+app.include_router(quote_router,      prefix="/api/quote", tags=["Sales Automation"])
+app.include_router(omniscient_router, prefix="/api",       tags=["OSINT"])
 
 
 # ------------------------------------------------------------------

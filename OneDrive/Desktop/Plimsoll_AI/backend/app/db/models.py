@@ -35,6 +35,8 @@ class Survey(Base):
     variance = Column(Float)
     evidence_path = Column(String, nullable=True)
     is_synced = Column(Integer, default=0) # 0=False, 1=True (SQLite boolean usually integer)
+    hash_seal = Column(String, nullable=True) # Cryptographic proof of integrity
+    notarized_at = Column(DateTime, nullable=True) # Canonical timestamp of notarization
 
 class User(Base):
     __tablename__ = "users"
@@ -43,6 +45,6 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     full_name = Column(String)
-    tier = Column(String, default="Standard")
+    tier = Column(String, default="Explorer") # Explorer, Commander, Sovereign
     is_active = Column(Integer, default=1)
     last_login = Column(DateTime, nullable=True)

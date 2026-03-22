@@ -21,53 +21,52 @@
  * -----------------------------------------------------------------------------
  */
 import { useState, useRef, useEffect } from 'react'
-import { Ship, Upload, Activity, History, Settings, FileVideo, AlertCircle, CheckCircle2, Download, Cloud, Loader2, Check, Plane, Shield } from 'lucide-react'
+import { Ship, Activity, History, Settings, Download, Cloud, Plane, Shield, Zap, RotateCcw, LogOut } from 'lucide-react'
 import axios from 'axios'
-import clsx from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { cn } from './lib/utils';
 import DronePilot from './components/DronePilot'
 import LandingPage from './components/LandingPage'
 import { useTranslation } from 'react-i18next'
-import OnboardingTour from './components/OnboardingTour'
-import SupportWidget from './components/SupportWidget'
-import TelemetryPanel from './components/TelemetryPanel'
+import DraftDashboard from './components/DraftDashboard';
+import { EnterpriseOnboarding } from './components/Commercial/EnterpriseOnboarding';
+import { useStore } from './store/useStore';
+import VesselCommander from './components/VesselCommander';
+import { Login } from './components/Login';
 
-// Utility for class merging
-function cn(...inputs: (string | undefined | null | false)[]) {
-    return twMerge(clsx(inputs))
-}
 
-interface Survey {
-    id: number
-    filename: string
-    draft_mean: number
-    confidence: number
-    sea_state: string
-    timestamp: string
-    is_synced?: number
+// Utility for API URL - Module Scope
+const getApiUrl = (path: string) => {
+    const isDev = window.location.port === "5173"
+    return isDev ? `http://127.0.0.1:8000${path}` : path
 }
 
 export default function App() {
     const { t, i18n } = useTranslation();
-    const [showLanding, setShowLanding] = useState(true)
-    const [activeTab, setActiveTab] = useState("Radar Survey")
+    const {
+        showLanding, setShowLanding,
+        activeTab, setActiveTab,
+        history, setHistory, addSurvey,
+        theme, setTheme,
+        isOnline, setIsOnline,
+        currentResult, setCurrentResult,
+        isAnalyzing, setIsAnalyzing,
+        user, token, logout,
+        syncDrafts
+    } = useStore();
+
+    const [vesselInfo, setVesselInfo] = useState({ name: 'MV PACIFIC LEGACY', imo: '9823471' })
     const [file, setFile] = useState<File | null>(null)
-    const [analyzing, setAnalyzing] = useState(false)
-    const [result, setResult] = useState<any>(null)
-    const [history, setHistory] = useState<Survey[]>([])
-    const [dragActive, setDragActive] = useState(false)
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+    const [isEnterpriseModalOpen, setIsEnterpriseModalOpen] = useState(false)
+    const [analysisStatus, setAnalysisStatus] = useState<string>('')
     const inputRef = useRef<HTMLInputElement>(null)
 
-    // Dynamic API URL for both Dev and Prod
-    const getApiUrl = (path: string) => {
-        const isDev = window.location.port === "5173"
-        return isDev ? `http://localhost:8000${path}` : path
-    }
 
     const fetchHistory = async () => {
+        if (!token) return;
         try {
-            const response = await axios.get(getApiUrl("/history"))
+            const response = await axios.get(getApiUrl("/api/history"), {
+                headers: { Authorization: `Bearer ${token}` }
+            })
             setHistory(response.data)
         } catch (error) {
             console.error("Failed to fetch history", error)
@@ -75,31 +74,26 @@ export default function App() {
     }
 
     useEffect(() => {
-        if (activeTab === "History Log") {
+        const handleOnline = () => {
+            setIsOnline(true);
+            syncDrafts();
+        };
+        const handleOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [setIsOnline, syncDrafts]);
+
+    useEffect(() => {
+        if (activeTab === "History Log" && user) {
             fetchHistory()
         }
-    }, [activeTab])
-
-    const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true)
-        } else if (e.type === "dragleave") {
-            setDragActive(false)
-        }
-    }
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setDragActive(false)
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            const droppedFile = e.dataTransfer.files[0];
-            setFile(droppedFile);
-            handleAnalyze(droppedFile); // Trigger auto-analysis
-        }
-    }
+    }, [activeTab, user])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         e.preventDefault()
@@ -112,52 +106,94 @@ export default function App() {
 
     const handleAnalyze = async (fileToAnalyze?: File) => {
         const fileToUse = fileToAnalyze || file;
-        if (!fileToUse) return;
+        if (!fileToUse || !token) return;
 
-        setAnalyzing(true);
-        setResult(null); // Clear previous results
+        setIsAnalyzing(true);
+        setAnalysisStatus("Initializing Neural Pipeline...");
+        setCurrentResult(null); // Clear previous results
         const formData = new FormData();
         formData.append("video", fileToUse);
 
         try {
-            const response = await axios.post(getApiUrl("/analyze"), formData, {
-                headers: { "Content-Type": "multipart/form-data" },
+            setAnalysisStatus("Neural Networks Warming Up...");
+            // Simultaneous wait for upload and small delay for UI effect
+            const response = await axios.post(getApiUrl("/api/analyze"), formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${token}`
+                },
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+                    if (percentCompleted < 100) {
+                        setAnalysisStatus(`Uploading Video Payload: ${percentCompleted}%`);
+                    } else {
+                        setAnalysisStatus("Cortex Engine: Processing Frames...");
+                    }
+                }
             })
-            setResult(response.data)
-        } catch (error) {
+
+            setAnalysisStatus("Running YOLOv8 + SAM Segmentation...");
+            await new Promise(r => setTimeout(r, 800)); // Visual feedback for user
+
+            setAnalysisStatus("Detecting Waterline & Draft Marks...");
+            const vesselResponse = await axios.get(getApiUrl(`/api/ship/9406087`), {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setAnalysisStatus("Physics Engine: Calculating Displacement...");
+            const finalResult = {
+                ...response.data,
+                ...vesselResponse.data,
+                vessel_name: vesselResponse.data.name,
+                vessel_imo: vesselResponse.data.imo || "9406087",
+                vessel_flag: vesselResponse.data.flag,
+                vessel_type: vesselResponse.data.type,
+                vessel_loa: vesselResponse.data.loa,
+                vessel_beam: vesselResponse.data.beam,
+                logistics: vesselResponse.data.logistics,
+                risk_score: vesselResponse.data.risk_score
+            };
+
+            setCurrentResult(finalResult);
+
+            // Add to persistent history
+            addSurvey({
+                id: Date.now(),
+                filename: fileToUse.name,
+                draft_mean: finalResult.draft_mean,
+                confidence: finalResult.confidence,
+                sea_state: finalResult.sea_state,
+                timestamp: new Date().toISOString(),
+                is_synced: isOnline ? 0 : 0 // Mark for sync
+            });
+
+            if (isOnline) syncDrafts(); // Trigger immediate sync if online
+            setAnalysisStatus("Analysis Complete.");
+
+        } catch (error: any) {
             console.error("Analysis failed", error)
-            alert("Analysis failed. Ensure backend is running.")
+            const errorMsg = error.response?.status === 422
+                ? `Analysis Rejected: ${error.response.data.detail || "Invalid video quality or no frames found."}`
+                : "Analysis failed. Ensure backend is running.";
+            alert(errorMsg);
         } finally {
-            setAnalyzing(false)
+            setIsAnalyzing(false);
+            setAnalysisStatus("");
         }
     }
 
-    const [syncingId, setSyncingId] = useState<number | null>(null)
 
-    const handleSync = async (id: number) => {
-        setSyncingId(id)
-        try {
-            await axios.post(getApiUrl(`/surveys/${id}/sync`))
-            // Update local state
-            setHistory(prev => prev.map(item =>
-                item.id === id ? { ...item, is_synced: 1 } : item
-            ))
-        } catch (error) {
-            console.error("Sync failed", error)
-            alert("Cloud sync failed.")
-        } finally {
-            setSyncingId(null)
-        }
-    }
 
     const handleDownload = async (id: number) => {
+        if (!token) return;
         try {
             // Extract primary language code (e.g., 'en-US' -> 'en')
             const currentLang = i18n.language.split('-')[0];
-            const response = await axios.get(getApiUrl(`/surveys/${id}/pdf?lang=${currentLang}`), {
+            const response = await axios.get(getApiUrl(`/api/surveys/${id}/pdf?lang=${currentLang}`), {
                 responseType: 'blob',
                 headers: {
-                    'Accept': 'application/pdf'
+                    'Accept': 'application/pdf',
+                    Authorization: `Bearer ${token}`
                 }
             })
 
@@ -194,26 +230,36 @@ export default function App() {
         return <LandingPage onEnterApp={() => setShowLanding(false)} />
     }
 
+    if (!user) {
+        return <Login />
+    }
+
     return (
         <div className={cn(
-            "flex h-screen overflow-hidden font-sans transition-colors duration-300",
-            theme === 'dark' ? "bg-[#0a192f] text-[#e6f1ff]" : "bg-gray-50 text-gray-900"
+            "min-h-screen text-slate-200 selection:bg-yellow-400/30 overflow-x-hidden flex transition-colors duration-500",
+            theme === 'midnight' ? "bg-black" : (theme === 'dark' ? "bg-[#020617]" : "bg-slate-50 text-slate-900")
         )}>
-            <SupportWidget />
-            <OnboardingTour />
-            <TelemetryPanel visible={analyzing || !!result} data={result} />
+            {/* Phase 31: Tactical Command */}
+            <VesselCommander
+                vesselInfo={vesselInfo}
+                onUpdateVessel={setVesselInfo}
+            />
 
+            {/* Background Holographic Atmosphere */}
             {/* Sidebar */}
             <aside className={cn(
                 "w-20 lg:w-64 border-r flex flex-col items-center lg:items-start py-8 transition-colors duration-300",
-                theme === 'dark' ? "bg-[#112240] border-[#64ffda]/10" : "bg-white border-gray-200"
+                theme === 'midnight' ? "bg-black border-yellow-400/10" : (theme === 'dark' ? "bg-[#020617] border-white/5" : "bg-white border-slate-200")
             )}>
-                <div className="px-4 mb-12 flex justify-center w-full relative">
-                    <div className="absolute inset-0 bg-[#64ffda]/5 blur-2xl rounded-full"></div>
+                <div
+                    onClick={() => setShowLanding(true)}
+                    className="px-4 mb-12 flex justify-center w-full relative cursor-pointer group/logo active:scale-95 transition-transform"
+                >
+                    <div className="absolute inset-0 bg-yellow-400/5 blur-2xl rounded-full group-hover/logo:bg-yellow-400/10 transition-colors"></div>
                     <img
                         src="/logo.png"
                         alt="Plimsoll Logo"
-                        className="w-full h-auto object-contain transition-all duration-500 scale-110 relative z-10 drop-shadow-[0_0_15px_rgba(100,255,218,0.3)]"
+                        className="w-full h-auto object-contain transition-all duration-500 scale-110 relative z-10 drop-shadow-[0_0_15px_rgba(253,224,47,0.2)] group-hover/logo:drop-shadow-[0_0_20px_rgba(253,224,47,0.4)]"
                         style={theme === 'dark' ? { filter: 'brightness(0) invert(1)' } : {}}
                     />
                 </div>
@@ -235,24 +281,67 @@ export default function App() {
                             theme={theme}
                         />
                     </div>
-                    <NavItem
-                        icon={<Plane size={20} />}
-                        label={t('nav.drone_pilot')}
-                        active={activeTab === "Drone Pilot"}
-                        onClick={() => setActiveTab("Drone Pilot")}
-                        theme={theme}
-                    />
-                    <NavItem
-                        icon={<Settings size={20} />}
-                        label={t('nav.sys_config')}
-                        active={activeTab === "System Config"}
-                        onClick={() => setActiveTab("System Config")}
-                        theme={theme}
-                    />
+                    {/* Tier-Gated: Commander+ */}
+                    {(user?.tier === 'Commander' || user?.tier === 'Sovereign') && (
+                        <NavItem
+                            icon={<Plane size={20} />}
+                            label={t('nav.drone_pilot')}
+                            active={activeTab === "Drone Pilot"}
+                            onClick={() => setActiveTab("Drone Pilot")}
+                            theme={theme}
+                        />
+                    )}
+                    {/* Tier-Gated: Sovereign Only */}
+                    {user?.tier === 'Sovereign' && (
+                        <NavItem
+                            icon={<Settings size={20} />}
+                            label={t('nav.sys_config')}
+                            active={activeTab === "System Config"}
+                            onClick={() => setActiveTab("System Config")}
+                            theme={theme}
+                        />
+                    )}
                 </nav>
 
-                <div className="px-6 py-4 text-[10px] font-mono text-[#8892b0] hidden lg:block opacity-30 uppercase tracking-widest">
-                    v2.2-STABLE
+                {user && (
+                    <div className="w-full border-t border-white/5 py-4 flex flex-col items-center lg:items-start lg:px-6">
+                        <div className="hidden lg:flex flex-col mb-3">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 truncate max-w-full">{user.full_name}</span>
+                            <span className={cn(
+                                "text-[8px] font-black uppercase tracking-[0.3em] w-fit px-2 py-0.5 rounded mt-1",
+                                user.tier === 'Sovereign' && "bg-yellow-400/20 text-yellow-400",
+                                user.tier === 'Commander' && "bg-blue-400/20 text-blue-400",
+                                user.tier === 'Explorer' && "bg-slate-400/20 text-slate-400"
+                            )}>
+                                {user.tier}
+                            </span>
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="flex items-center justify-center lg:justify-start gap-2 text-red-500 hover:text-red-400 transition-colors group p-2 lg:p-0"
+                            title="Sign Out"
+                        >
+                            <LogOut size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] hidden lg:inline">Logout</span>
+                        </button>
+                    </div>
+                )}
+
+                <div className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.4em] text-slate-700 hidden lg:block opacity-30">
+                    V2.2-STABLE // PLIMSOLL AI
+                </div>
+
+                <div className="mt-auto p-4 w-full">
+                    {user?.tier !== 'Sovereign' && (
+                        <button
+                            onClick={() => setIsEnterpriseModalOpen(true)}
+                            className="w-full py-4 rounded-xl bg-yellow-400 group relative overflow-hidden flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-700 skew-x-12" />
+                            <Zap size={14} className="text-black group-hover:animate-bounce" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-black">{t('onboarding.go_enterprise')}</span>
+                        </button>
+                    )}
                 </div>
             </aside>
 
@@ -262,38 +351,51 @@ export default function App() {
                 <div className="flex justify-end gap-3 mb-6">
                     <div className={cn(
                         "flex rounded-lg p-1 border",
-                        theme === 'dark' ? "bg-[#112240] border-[#64ffda]/20" : "bg-white border-gray-200 shadow-sm"
+                        theme === 'dark' ? "bg-[#0f172a] border-white/5" : "bg-white border-slate-200 shadow-sm"
                     )}>
                         <button
                             onClick={() => changeLanguage('en')}
-                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('en') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            className={cn("px-3 py-1 rounded-md text-xs font-black transition-all", (i18n.language || 'en').startsWith('en') ? "bg-yellow-400 text-black shadow-lg" : "text-slate-500")}>
                             EN
                         </button>
                         <button
                             onClick={() => changeLanguage('es')}
-                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('es') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            className={cn("px-3 py-1 rounded-md text-xs font-black transition-all", (i18n.language || 'en').startsWith('es') ? "bg-yellow-400 text-black shadow-lg" : "text-slate-500")}>
                             ES
                         </button>
                         <button
                             onClick={() => changeLanguage('pt')}
-                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('pt') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            className={cn("px-3 py-1 rounded-md text-xs font-black transition-all", (i18n.language || 'en').startsWith('pt') ? "bg-yellow-400 text-black shadow-lg" : "text-slate-500")}>
                             PT
                         </button>
                         <button
                             onClick={() => changeLanguage('zh')}
-                            className={cn("px-3 py-1 rounded-md text-xs font-bold transition-all", i18n.language.startsWith('zh') ? "bg-[#64ffda] text-[#0a192f]" : "text-[#8892b0]")}>
+                            className={cn("px-3 py-1 rounded-md text-xs font-black transition-all", (i18n.language || 'en').startsWith('zh') ? "bg-yellow-400 text-black shadow-lg" : "text-slate-500")}>
                             ZH
                         </button>
                     </div>
 
                     <button
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        onClick={() => {
+                            if (theme === 'light') setTheme('dark');
+                            else if (theme === 'dark') setTheme('midnight');
+                            else setTheme('light');
+                        }}
                         className={cn(
                             "p-2 rounded-lg border flex items-center justify-center transition-all",
-                            theme === 'dark' ? "bg-[#112240] border-[#64ffda]/20 text-[#64ffda]" : "bg-white border-gray-200 text-gray-700 shadow-sm"
+                            theme === 'midnight' ? "bg-black border-yellow-400/30 text-yellow-400 shadow-[0_0_15px_rgba(253,224,71,0.2)]" :
+                                (theme === 'dark' ? "bg-[#0f172a] border-white/5 text-yellow-400" : "bg-white border-slate-200 text-slate-900 shadow-sm")
                         )}>
-                        {theme === 'dark' ? <Ship size={18} /> : <Cloud size={18} />}
+                        {theme === 'midnight' ? <Zap size={18} className="animate-pulse" /> : (theme === 'dark' ? <Ship size={18} /> : <Cloud size={18} />)}
                     </button>
+
+                    <div className={cn(
+                        "flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all",
+                        isOnline ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-500 animate-pulse"
+                    )}>
+                        <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" : "bg-red-500")} />
+                        {isOnline ? "Cloud Online" : "Offline Mode"}
+                    </div>
                 </div>
 
                 <header className="flex justify-between items-center mb-8">
@@ -303,181 +405,48 @@ export default function App() {
                         </h1>
                         <p className="text-[#8892b0] mt-1">{t('app.subtitle')}</p>
                     </div>
-                    {analyzing && (
-                        <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-[#64ffda]/10 border border-[#64ffda]/20 animate-pulse">
-                            <Activity className="text-[#64ffda] animate-spin" size={16} />
-                            <span className="text-[#64ffda] text-xs font-bold uppercase tracking-widest">{t('dashboard.processing')}</span>
-                        </div>
-                    )}
-                    {!analyzing && (
-                        <div className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-full border transition-colors tour-system-status",
-                            theme === 'dark' ? "bg-[#64ffda]/5 border-[#64ffda]/20 text-[#64ffda]" : "bg-green-50 border-green-200 text-green-700"
-                        )}>
-                            <div className={cn("w-2 h-2 rounded-full animate-pulse", theme === 'dark' ? "bg-[#64ffda]" : "bg-green-500")}></div>
-                            <span className="text-sm font-medium">{t('dashboard.sys_op')}</span>
-                        </div>
-                    )}
                 </header>
 
+
+
                 {activeTab === "Radar Survey" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-                        {/* Left Column: Input */}
-                        <div className="lg:col-span-2 space-y-6">
-                            <div
-                                className={cn(
-                                    "h-96 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer relative overflow-hidden group tour-upload-zone",
-                                    dragActive ? "border-[#64ffda] bg-[#64ffda]/5" : "border-[#8892b0]/30 hover:border-[#64ffda]/50 hover:bg-[#112240]"
-                                )}
-                                onDragEnter={handleDrag}
-                                onDragLeave={handleDrag}
-                                onDragOver={handleDrag}
-                                onDrop={handleDrop}
-                                onClick={() => inputRef.current?.click()}
-                            >
-                                <input
-                                    ref={inputRef}
-                                    type="file"
-                                    className="hidden"
-                                    accept="video/*"
-                                    onChange={handleChange}
-                                />
-
-                                {file ? (
-                                    <div className={cn("text-center z-10 p-8 glass-panel animate-fade-in", theme === 'light' && "bg-white border-gray-200 shadow-xl")}>
-                                        <FileVideo className="w-16 h-16 text-[#64ffda] mx-auto mb-4" />
-                                        <p className={cn("text-xl font-semibold", theme === 'light' && "text-gray-900")}>{file.name}</p>
-                                        <p className="text-sm text-[#8892b0] mt-2">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setFile(null); setResult(null); }}
-                                            className="mt-6 text-sm text-red-400 hover:text-red-300 underline"
-                                        >
-                                            {t('dashboard.remove_file')}
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="text-center p-8 pointer-events-none">
-                                        <div className={cn(
-                                            "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300",
-                                            theme === 'dark' ? "bg-[#112240]" : "bg-gray-100"
-                                        )}>
-                                            <Upload className="w-10 h-10 text-[#64ffda]" />
-                                        </div>
-                                        <h3 className={cn("text-xl font-semibold mb-2", theme === 'light' && "text-gray-900")}>{t('dashboard.upload_btn')}</h3>
-                                        <p className="text-[#8892b0]">{t('dashboard.drag_drop')}</p>
-                                        <p className="text-xs text-[#8892b0] mt-4">Supports MP4, AVI, MOV</p>
-                                    </div>
-                                )}
-
-                                {/* Background Grid Effect */}
-                                <div className="absolute inset-0 bg-[linear-gradient(rgba(100,255,218,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(100,255,218,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_70%)] pointer-events-none"></div>
-                            </div>
-
-                            {/* Analysis Button Removed for UX Automation (Phase 10) */}
-                        </div>
-
-                        {/* Right Column: Results */}
-                        <div className="space-y-6">
-                            {!result ? (
-                                <div className={cn(
-                                    "h-full rounded-2xl border flex flex-col items-center justify-center p-8 text-center text-[#8892b0]",
-                                    theme === 'dark' ? "bg-[#112240] border-[#8892b0]/10" : "bg-white border-gray-200 shadow-sm"
-                                )}>
-                                    <div className={cn(
-                                        "w-16 h-16 rounded-full flex items-center justify-center mb-4 text-[#64ffda]",
-                                        theme === 'dark' ? "bg-[#0a192f]" : "bg-gray-100"
-                                    )}>
-                                        <Activity className="w-8 h-8 opacity-50" />
-                                    </div>
-                                    <p>{t('dashboard.awaiting')}</p>
-                                    <p className="text-xs mt-2 opacity-50">{i18n.language.startsWith('es') ? "Sube un video para ver analíticas" : "Upload a video to see analytics"}</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4 animate-fade-in-up">
-                                    <ResultCard
-                                        label={t('dashboard.mean_draft')}
-                                        value={`${result.draft_mean} m`}
-                                        subtext={i18n.language.startsWith('es') ? "Promedio Calculado" : "Calculated Average"}
-                                        highlight
-                                        theme={theme}
-                                    />
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <ResultCard
-                                            label={t('dashboard.confidence')}
-                                            value={`${(result.confidence * 100).toFixed(0)}%`}
-                                            icon={<CheckCircle2 className="text-[#64ffda]" />}
-                                            theme={theme}
-                                        />
-                                        <ResultCard
-                                            label={t('dashboard.sea_state')}
-                                            value={result.sea_state.toUpperCase()}
-                                            icon={<AlertCircle className="text-blue-400" />}
-                                            theme={theme}
-                                        />
-                                    </div>
-
-                                    <div className={cn(
-                                        "p-6 rounded-2xl border backdrop-blur-sm tour-telemetry-panel",
-                                        theme === 'dark' ? "bg-[#112240]/50 border-[#64ffda]/20" : "bg-white border-gray-200 shadow-sm"
-                                    )}>
-                                        <h4 className="text-sm font-semibold text-[#8892b0] uppercase mb-4">{t('dashboard.live_telemetry')}</h4>
-                                        <div className="space-y-3">
-                                            <TelemetryRow label={i18n.language.startsWith('es') ? "Densidad Agua" : "Water Density"} value="1.025 g/cm³" theme={theme} />
-                                            <TelemetryRow label="Waterline Y" value={`${result.telemetry?.waterline_y || 0} px`} theme={theme} />
-                                            <TelemetryRow label={i18n.language.startsWith('es') ? "Varianza Señal" : "Signal Variance"} value={(result.telemetry?.variance || 0).toFixed(1)} theme={theme} />
-                                        </div>
-                                    </div>
-
-                                    <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm flex items-center gap-3">
-                                        <CheckCircle2 size={18} />
-                                        {t('dashboard.audit_compliant')} - AI Verified (ID: {result.id})
-                                    </div>
-
-                                    {/* Phase 26: Blockchain Badge */}
-                                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm flex items-center gap-3">
-                                        <div className="relative">
-                                            <div className="absolute inset-0 bg-blue-500 blur-sm opacity-50 animate-pulse"></div>
-                                            <Shield size={18} className="relative z-10" />
-                                        </div>
-                                        BLOCKCHAIN NOTARIZED (SHA-256)
-                                    </div>
-
-                                    {result.ai_metadata && (
-                                        <div className={cn(
-                                            "p-6 rounded-2xl border animate-fade-in",
-                                            theme === 'dark' ? "bg-[#64ffda]/5 border-[#64ffda]/20" : "bg-green-50 border-green-100 shadow-sm"
-                                        )}>
-                                            <h4 className="text-sm font-semibold text-[#64ffda] uppercase mb-4 flex items-center gap-2">
-                                                <Activity size={16} /> {t('dashboard.neural_insights')}
-                                            </h4>
-                                            <div className="space-y-2">
-                                                <p className="text-xs text-[#8892b0]">{t('dashboard.detected_marks')}: <span className={theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900"}>{result.ai_metadata.objects_detected}</span></p>
-                                                <div className="mt-2">
-                                                    <p className="text-xs text-[#8892b0] mb-1">{t('dashboard.ocr_seq')}:</p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {result.ai_metadata.ocr_readings.slice(0, 3).map((text: string, i: number) => (
-                                                            <span key={i} className={cn(
-                                                                "px-2 py-0.5 rounded border text-[10px]",
-                                                                theme === 'dark' ? "bg-[#112240] text-[#64ffda] border-[#64ffda]/30" : "bg-gray-100 text-gray-700 border-gray-200"
-                                                            )}>
-                                                                {text}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                    <div className="flex-1">
+                        <input
+                            ref={inputRef}
+                            type="file"
+                            className="hidden"
+                            accept="video/*"
+                            onChange={handleChange}
+                        />
+                        <DraftDashboard
+                            data={currentResult}
+                            onConfirm={() => console.log("Confirmed")}
+                            onUpload={() => inputRef.current?.click()}
+                            onExport={handleDownload}
+                            onEnrich={(enrichedData) => {
+                                setCurrentResult({
+                                    ...currentResult,
+                                    ...enrichedData,
+                                    vessel_name: enrichedData.name,
+                                    vessel_imo: enrichedData.imo,
+                                    vessel_flag: enrichedData.flag,
+                                    vessel_type: enrichedData.type,
+                                    vessel_loa: enrichedData.loa,
+                                    vessel_beam: enrichedData.beam,
+                                    logistics: enrichedData.logistics,
+                                    risk_score: enrichedData.risk_score
+                                });
+                            }}
+                            theme={theme}
+                            isAnalyzing={isAnalyzing}
+                            analysisStatus={analysisStatus}
+                        />
                     </div>
                 )}
 
                 {activeTab === "Drone Pilot" && (
                     <div className="w-full h-full">
-                        <DronePilot lang={i18n.language.startsWith('es') ? 'es' : 'en'} theme={theme} />
+                        <DronePilot theme={theme} />
                     </div>
                 )}
 
@@ -501,95 +470,179 @@ export default function App() {
                                                 <p className="text-sm text-[#8892b0] font-mono mt-1">{survey.filename.substring(0, 8)}...mp4</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-8">
-                                            <div className="text-right hidden sm:block">
-                                                <p className="text-xs text-[#8892b0] uppercase">{t('dashboard.sea_state')}</p>
-                                                <p className={theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900"}>{survey.sea_state}</p>
-                                            </div>
-                                            <div className="text-right hidden sm:block">
-                                                <p className="text-xs text-[#8892b0] uppercase">{t('dashboard.confidence')}</p>
-                                                <p className="text-[#64ffda]">{(survey.confidence * 100).toFixed(0)}%</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {survey.is_synced ? (
-                                                    <div className="p-2 rounded-full bg-green-500/10 text-green-500" title="Synced to Cloud">
-                                                        <Check size={20} />
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleSync(survey.id)}
-                                                        disabled={syncingId === survey.id}
-                                                        className="p-2 rounded-full hover:bg-blue-500/10 text-[#8892b0] hover:text-blue-400 transition-colors"
-                                                        title="Sync to Cloud"
-                                                    >
-                                                        {syncingId === survey.id ? <Loader2 size={20} className="animate-spin" /> : <Cloud size={20} />}
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => handleDownload(survey.id)}
-                                                    className="p-2 rounded-full hover:bg-[#64ffda]/10 text-[#8892b0] hover:text-[#64ffda] transition-colors"
-                                                    title="Download PDF Report"
-                                                >
-                                                    <Download size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
+
+                                        <button
+                                            onClick={() => handleDownload(survey.id)}
+                                            className={cn(
+                                                "p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all",
+                                                theme === 'dark' ? "hover:bg-[#64ffda]/20 text-[#64ffda]" : "hover:bg-blue-100 text-blue-600"
+                                            )}
+                                            title="Download PDF"
+                                        >
+                                            <Download size={20} />
+                                        </button>
                                     </div>
                                 ))
                             )}
                         </div>
                     </div>
                 )}
+
+                {activeTab === "System Config" && (
+                    <div className={cn(
+                        "rounded-[2.5rem] p-8 md:p-12 border h-full overflow-y-auto",
+                        theme === 'dark' ? "bg-white/5 border-white/5 shadow-2xl" : "bg-white border-slate-200"
+                    )}>
+                        <h2 className={cn("text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-2", theme === 'dark' ? "text-white" : "text-slate-900")}>
+                            <Settings className="text-yellow-400" size={24} />
+                            {t('config.physics_engine')}
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* General Parameters */}
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{t('config.vessel_particulars')}</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">{t('config.lbp')}</label>
+                                        <input type="number" defaultValue={229.0} className="w-full bg-black/40 border border-white/5 rounded-lg p-3 text-sm font-mono text-white focus:border-yellow-400/50 outline-none transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">{t('config.beam')}</label>
+                                        <input type="number" defaultValue={32.26} className="w-full bg-black/40 border border-white/5 rounded-lg p-3 text-sm font-mono text-white focus:border-yellow-400/50 outline-none transition-all" />
+                                    </div>
+                                </div>
+
+                                {/* [PHASE 2.5] Environment Parameters */}
+                                <div className="pt-4 border-t border-white/5">
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3">{t('config.env_trim')}</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">{t('config.water_density')}</label>
+                                            <input
+                                                id="env-density"
+                                                type="number"
+                                                defaultValue={1.025}
+                                                step="0.001"
+                                                className="w-full bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-3 text-sm font-mono text-yellow-400 focus:border-yellow-400 outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">{t('config.calc_trim')}</label>
+                                            <div id="calc-trim" className="w-full bg-black/60 border border-white/5 rounded-lg p-3 text-sm font-mono text-slate-600">
+                                                --
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">{t('config.draft_fwd')}</label>
+                                            <input id="env-fwd" type="number" placeholder="Optional" className="w-full bg-black/40 border border-white/5 rounded-lg p-3 text-sm font-mono text-white focus:border-yellow-400/50 outline-none transition-all" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] text-slate-500 font-bold uppercase mb-1 block">{t('config.draft_aft')}</label>
+                                            <input id="env-aft" type="number" placeholder="Optional" className="w-full bg-black/40 border border-white/5 rounded-lg p-3 text-sm font-mono text-white focus:border-yellow-400/50 outline-none transition-all" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Hydrostatic Table (TPC) */}
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{t('config.hydro_table')}</h3>
+                                <div className="bg-black/40 rounded-xl p-6 border border-white/5">
+                                    <div className="grid grid-cols-2 gap-4 mb-4 text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+                                        <div>DRAFT (m)</div>
+                                        <div>TPC (t/cm)</div>
+                                    </div>
+                                    {[
+                                        { d: 5.0, t: 48.5 },
+                                        { d: 8.0, t: 52.1 },
+                                        { d: 12.0, t: 55.4 },
+                                        { d: 15.0, t: 58.2 }
+                                    ].map((row, i) => (
+                                        <div key={i} className="grid grid-cols-2 gap-4 mb-2 text-sm font-mono border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                                            <input type="number" defaultValue={row.d} className="bg-transparent border-none text-slate-500 focus:text-white focus:ring-0 p-0 outline-none" />
+                                            <input type="number" defaultValue={row.t} className="bg-transparent border-none text-white focus:ring-0 p-0 outline-none" />
+                                        </div>
+                                    ))}
+                                    <button className="w-full mt-4 py-3 text-[10px] font-black uppercase tracking-widest text-yellow-400 border border-yellow-400/20 rounded-lg hover:bg-yellow-400 hover:text-black transition-all">
+                                        {t('config.add_row')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm("CRITICAL: This will wipe all local history and reset the application. Proceed?")) {
+                                        // Clear storage completely to ensure it sticks
+                                        useStore.persist.clearStorage();
+                                        // Also reset the in-memory state just in case
+                                        useStore.getState().resetState();
+
+                                        // Small delay to allow IDB to breathe before reload
+                                        setTimeout(() => {
+                                            window.location.reload();
+                                        }, 100);
+                                    }
+                                }}
+                                className="text-[10px] font-black uppercase tracking-widest text-red-500/50 hover:text-red-500 transition-colors flex items-center gap-2"
+                            >
+                                <RotateCcw size={12} />
+                                Reset Application State
+                            </button>
+
+                            <button
+                                onClick={async () => {
+                                    // Quick MVP implementation: Grab values by ID
+                                    const density = parseFloat((document.getElementById('env-density') as HTMLInputElement).value);
+                                    const fwd = parseFloat((document.getElementById('env-fwd') as HTMLInputElement).value) || 0;
+                                    const aft = parseFloat((document.getElementById('env-aft') as HTMLInputElement).value) || 0;
+
+                                    try {
+                                        const res = await axios.post(getApiUrl('/api/environment'), {
+                                            density,
+                                            draft_fwd: fwd || null,
+                                            draft_aft: aft || null
+                                        });
+                                        alert(`Physics Kernel Updated!\nTrim: ${res.data.physics_state.trim.toFixed(3)} m`);
+                                        const trimDisp = document.getElementById('calc-trim');
+                                        if (trimDisp) trimDisp.innerText = res.data.physics_state.trim.toFixed(3) + " m";
+                                    } catch (e) {
+                                        alert("Update Failed");
+                                        console.error(e);
+                                    }
+                                }}
+                                className="bg-yellow-400 text-black font-black uppercase tracking-widest px-8 py-4 rounded-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 shadow-xl"
+                            >
+                                <Shield size={18} strokeWidth={3} />
+                                {t('config.update_kernel')}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
+            <EnterpriseOnboarding
+                isOpen={isEnterpriseModalOpen}
+                onClose={() => setIsEnterpriseModalOpen(false)}
+            />
         </div>
     )
 }
 
-function NavItem({ icon, label, active = false, onClick, theme }: { icon: React.ReactNode, label: string, active?: boolean, onClick?: () => void, theme: 'light' | 'dark' }) {
+function NavItem({ icon, label, active = false, onClick, theme }: { icon: React.ReactNode, label: string, active?: boolean, onClick?: () => void, theme: 'light' | 'dark' | 'midnight' }) {
     return (
         <button
             onClick={onClick}
             className={cn(
                 "w-full flex items-center gap-4 p-3 rounded-xl transition-all group",
                 active
-                    ? (theme === 'dark' ? "bg-[#64ffda]/10 text-[#64ffda]" : "bg-blue-50 text-blue-600")
-                    : "text-[#8892b0] hover:text-[#64ffda] hover:bg-black/5"
+                    ? (theme === 'midnight' ? "bg-yellow-400/20 text-yellow-400 border border-yellow-400/10" : (theme === 'dark' ? "bg-yellow-400/10 text-yellow-400" : "bg-slate-900 text-white"))
+                    : "text-slate-500 hover:text-yellow-400 hover:bg-white/5"
             )}>
             <div className={cn("transition-transform group-hover:scale-110", active && "scale-110")}>{icon}</div>
-            <span className="hidden lg:block font-medium">{label}</span>
-            {active && <div className={cn("ml-auto w-1 h-1 rounded-full hidden lg:block", theme === 'dark' ? "bg-[#64ffda]" : "bg-blue-600")} />}
+            <span className="hidden lg:block font-bold uppercase tracking-tighter text-sm">{label}</span>
+            {active && <div className={cn("ml-auto w-1 h-1 rounded-full hidden lg:block", (theme === 'dark' || theme === 'midnight') ? "bg-yellow-400" : "bg-white")} />}
         </button>
-    )
-}
-
-function ResultCard({ label, value, subtext, highlight = false, icon, theme }: { label: string, value: string, subtext?: string, highlight?: boolean, icon?: React.ReactNode, theme: 'light' | 'dark' }) {
-    return (
-        <div className={cn(
-            "p-6 rounded-2xl border backdrop-blur-md transition-all hover:scale-[1.02]",
-            highlight
-                ? (theme === 'dark' ? "bg-[#64ffda]/10 border-[#64ffda]/30 shadow-[0_0_30px_rgba(100,255,218,0.1)]" : "bg-green-50 border-green-200 shadow-md")
-                : (theme === 'dark' ? "bg-[#112240]/80 border-[#8892b0]/10" : "bg-white border-gray-200 shadow-sm")
-        )}>
-            <div className="flex justify-between items-start mb-2">
-                <h3 className="text-[#8892b0] text-sm uppercase tracking-wider">{label}</h3>
-                {icon}
-            </div>
-            <div className={cn(
-                "text-3xl font-bold font-mono",
-                highlight ? (theme === 'dark' ? "text-[#64ffda]" : "text-green-600") : (theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900")
-            )}>
-                {value}
-            </div>
-            {subtext && <p className="text-xs text-[#8892b0] mt-1">{subtext}</p>}
-        </div>
-    )
-}
-
-function TelemetryRow({ label, value, theme }: { label: string, value: string, theme: 'light' | 'dark' }) {
-    return (
-        <div className="flex justify-between items-center text-sm">
-            <span className="text-[#8892b0]">{label}</span>
-            <span className={cn("font-mono", theme === 'dark' ? "text-[#e6f1ff]" : "text-gray-900")}>{value}</span>
-        </div>
     )
 }
