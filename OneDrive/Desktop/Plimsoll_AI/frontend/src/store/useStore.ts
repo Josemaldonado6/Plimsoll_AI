@@ -41,6 +41,8 @@ interface PlimsollState {
     isAnalyzing: boolean
     user: User | null
     token: string | null
+    edgeUrl: string
+
 
     // Actions
     setShowLanding: (show: boolean) => void
@@ -53,6 +55,7 @@ interface PlimsollState {
     setIsAnalyzing: (status: boolean) => void
     login: (user: User, token: string) => void
     logout: () => void
+    setEdgeUrl: (url: string) => void
     syncDrafts: () => Promise<void>
     resetState: () => void
 }
@@ -69,6 +72,8 @@ export const useStore = create<PlimsollState>()(
             isAnalyzing: false,
             user: null,
             token: null,
+            edgeUrl: "http://192.168.1.160:8000",
+
 
             setShowLanding: (show) => set({ showLanding: show }),
             setActiveTab: (tab) => set({ activeTab: tab }),
@@ -83,6 +88,8 @@ export const useStore = create<PlimsollState>()(
 
             login: (user, token) => set({ user, token }),
             logout: () => set({ user: null, token: null, showLanding: true }),
+            setEdgeUrl: (edgeUrl: string) => set({ edgeUrl }),
+
 
             syncDrafts: async () => {
                 const { history, isOnline } = useStore.getState();
@@ -130,3 +137,26 @@ export const useStore = create<PlimsollState>()(
         }
     )
 )
+
+/**
+ * [HYBRID_GATEWAY] Centralized API Routing Manager
+ * This function determines if a request should go to the Global Vercel API
+ * or the Local Intel Ultra 9 Edge Hub.
+ */
+export const getApiUrl = (path: string) => {
+    const { edgeUrl } = useStore.getState();
+    const isDev = typeof window !== 'undefined' && (window.location.port === "5173" || window.location.hostname === "localhost");
+    
+    // EDGE-SPECIFIC ENDPOINTS (NPU Intensive)
+    const edgeEndpoints = ['/api/analyze', '/api/environment', '/api/calibrate', '/api/ship', '/api/ballast', '/api/drone'];
+    const isEdgeEndpoint = edgeEndpoints.some(ep => path.startsWith(ep));
+    
+    if (isEdgeEndpoint) {
+        // Ensure path starts with / for URL construction
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        return `${edgeUrl}${normalizedPath}`;
+    }
+    
+    // CLOUD / AUTH ENDPOINTS (Supabase)
+    return isDev ? `http://localhost:8000${path}` : path;
+}

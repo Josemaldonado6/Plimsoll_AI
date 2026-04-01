@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Zap, ShieldAlert, CheckCircle2, Droplets, HardDrive } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { getApiUrl } from '../store/useStore';
 
 interface Tank {
     id: string;
@@ -11,8 +12,6 @@ interface Tank {
 
 export const BallastMonitor: React.FC = () => {
     const { t } = useTranslation();
-    const isDev = window.location.port === "5173" || window.location.hostname === "localhost";
-    const getApiUrl = (path: string) => isDev ? `http://localhost:8000${path}` : path;
     const [tanks, setTanks] = useState<Tank[]>([
         { id: 'FP_TANK', level: 45, capacity: 500 },
         { id: 'DB_1_P', level: 82, capacity: 1200 },

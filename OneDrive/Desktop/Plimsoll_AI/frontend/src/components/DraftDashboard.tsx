@@ -21,6 +21,7 @@ import { IndustrialTheme as UI } from '../utils/IndustrialTheme';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import axios from 'axios';
+import { getApiUrl } from '../store/useStore';
 import { useTranslation } from 'react-i18next';
 
 function cn(...inputs: ClassValue[]) {
@@ -109,9 +110,7 @@ export default function DraftDashboard({
         if (!data?.vessel_imo || enriching) return;
         setEnriching(true);
         try {
-            const isDev = window.location.port === "5173";
-            const baseUrl = isDev ? "http://localhost:8000" : "";
-            const response = await axios.get(`${baseUrl}/api/ship/${data.vessel_imo}`);
+            const response = await axios.get(getApiUrl(`/api/ship/${data.vessel_imo}`));
             if (onEnrich) onEnrich(response.data);
         } catch (error) {
             console.error("Enrichment failed", error);
@@ -533,7 +532,7 @@ export default function DraftDashboard({
                     <ChevronDown size={14} className={`transition-transform duration-500 ${showAudit ? 'rotate-180' : ''}`} />
                 </button>
 
-                <AuditTrailPanel trail={data.physics_audit_trail} visible={showAudit} theme={theme} />
+                <AuditTrailPanel trail={data.physics_audit_trail} visible={showAudit} theme={theme === 'midnight' ? 'dark' : theme} />
             </div>
 
             {/* Footer Information */}

@@ -22,20 +22,14 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Plane, Navigation, Battery, Activity, Compass, Play, ShieldAlert, Wifi, Plus, Trash2, HardDrive } from 'lucide-react';
-import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+
 function cn(...inputs: (string | undefined | null | false)[]) {
     return twMerge(clsx(inputs))
 };
-
-// Utility for API URL
-const getApiUrl = (path: string) => {
-    const isDev = window.location.port === "5173"
-    return isDev ? `http://localhost:8000${path}` : path
-}
 
 interface DroneState {
     status: string;

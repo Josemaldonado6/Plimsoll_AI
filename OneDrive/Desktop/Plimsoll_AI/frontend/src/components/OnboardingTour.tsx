@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 
+
 export default function OnboardingTour() {
-    const { t } = useTranslation();
     const [run, setRun] = useState(false);
+    const { t } = useTranslation();
 
     useEffect(() => {
         // Check if tour has been completed
@@ -27,20 +28,20 @@ export default function OnboardingTour() {
     const steps: Step[] = [
         {
             target: '.tour-upload-zone',
-            content: 'Start here! Drag and drop your drone footage to begin the AI analysis.',
+            content: t('onboarding.step_1'),
             disableBeacon: true,
         },
         {
             target: '.tour-telemetry-panel',
-            content: 'Monitor live drone telemetry and sea state conditions here.',
+            content: t('onboarding.step_2'),
         },
         {
             target: '.tour-history-tab',
-            content: 'Access your previous surveys and download legal PDF reports.',
+            content: t('onboarding.step_3'),
         },
         {
             target: '.tour-system-status',
-            content: 'Check system health and connected modules.',
+            content: t('onboarding.step_4'),
         }
     ];
 
@@ -53,18 +54,31 @@ export default function OnboardingTour() {
             showProgress
             styles={{
                 options: {
-                    primaryColor: '#64ffda',
-                    textColor: '#112240',
-                    backgroundColor: '#e6f1ff',
-                    overlayColor: 'rgba(2, 12, 27, 0.85)',
+                    primaryColor: '#fde047',
+                    textColor: '#ffffff',
+                    backgroundColor: '#0f172a',
+                    overlayColor: 'rgba(2, 6, 23, 0.85)',
+                    arrowColor: '#0f172a',
                 },
                 buttonNext: {
-                    backgroundColor: '#64ffda',
-                    color: '#0a192f',
-                    fontWeight: 'bold',
+                    backgroundColor: '#fde047',
+                    color: '#000000',
+                    fontWeight: '900',
+                    borderRadius: '8px',
+                    textTransform: 'uppercase',
+                    fontSize: '10px',
+                    letterSpacing: '1px',
                 },
                 buttonBack: {
-                    color: '#112240',
+                    color: '#fde047',
+                    fontWeight: 'bold',
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                },
+                buttonSkip: {
+                    color: '#94a3b8',
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
                 }
             }}
             callback={handleJoyrideCallback}

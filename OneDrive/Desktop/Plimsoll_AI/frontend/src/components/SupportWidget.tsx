@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageSquare, X, Send } from 'lucide-react';
 
 interface Message {
     id: number;
@@ -50,25 +50,25 @@ export default function SupportWidget() {
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
             {/* Chat Window */}
             {open && (
-                <div className="mb-4 w-80 h-96 bg-[#112240] border border-[#64ffda]/20 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up">
+                <div className="mb-4 w-80 h-96 bg-[#020617] border border-white/10 rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in-up">
                     {/* Header */}
-                    <div className="bg-[#0a192f] p-4 border-b border-[#64ffda]/10 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            <span className="text-[#64ffda] font-bold text-xs uppercase tracking-widest">Plimsoll Agent</span>
+                    <div className="bg-white/5 p-4 border-b border-white/5 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
+                            <span className="text-yellow-400 font-black text-[10px] uppercase tracking-widest">Plimsoll AI Support</span>
                         </div>
-                        <button onClick={() => setOpen(false)} className="text-[#8892b0] hover:text-white">
+                        <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-white transition-colors">
                             <X size={16} />
                         </button>
                     </div>
 
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] p-3 rounded-xl text-xs ${msg.sender === 'user'
-                                        ? 'bg-[#64ffda] text-[#0a192f] rounded-br-none font-medium'
-                                        : 'bg-[#1a2c4e] text-gray-200 rounded-bl-none border border-[#64ffda]/10'
+                                <div className={`max-w-[85%] p-4 rounded-2xl text-xs ${msg.sender === 'user'
+                                    ? 'bg-yellow-400 text-black rounded-br-none font-black uppercase tracking-tight'
+                                    : 'bg-white/5 text-slate-300 rounded-bl-none border border-white/5 font-medium'
                                     }`}>
                                     {msg.text}
                                 </div>
@@ -78,20 +78,20 @@ export default function SupportWidget() {
                     </div>
 
                     {/* Input */}
-                    <div className="p-3 bg-[#0a192f] border-t border-[#64ffda]/10 flex gap-2">
+                    <div className="p-3 bg-black/40 border-t border-white/5 flex gap-2">
                         <input
                             type="text"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Ask about pricing..."
-                            className="flex-1 bg-[#112240] border border-[#64ffda]/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#64ffda]/50"
+                            placeholder="Type command..."
+                            className="flex-1 bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-yellow-400/30 transition-all font-mono"
                         />
                         <button
                             onClick={handleSend}
-                            className="p-2 bg-[#64ffda]/10 text-[#64ffda] rounded-lg hover:bg-[#64ffda]/20"
+                            className="p-2.5 bg-yellow-400/10 text-yellow-400 rounded-xl hover:bg-yellow-400 transition-all hover:text-black border border-yellow-400/20"
                         >
-                            <Send size={16} />
+                            <Send size={16} strokeWidth={3} />
                         </button>
                     </div>
                 </div>
@@ -100,9 +100,10 @@ export default function SupportWidget() {
             {/* Float Button */}
             <button
                 onClick={() => setOpen(!open)}
-                className="w-14 h-14 rounded-full bg-[#64ffda] text-[#0a192f] flex items-center justify-center shadow-[0_0_20px_rgba(100,255,218,0.4)] hover:scale-110 transition-transform duration-300"
+                className="w-16 h-16 rounded-full bg-yellow-400 text-black flex items-center justify-center shadow-[0_0_30px_rgba(253,224,47,0.3)] hover:scale-110 active:scale-95 transition-all duration-300 relative group"
             >
-                {open ? <X size={24} /> : <MessageSquare size={24} />}
+                <div className="absolute inset-0 rounded-full bg-yellow-400 animate-ping opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                {open ? <X size={24} strokeWidth={3} className="relative z-10" /> : <MessageSquare size={24} strokeWidth={3} className="relative z-10" />}
             </button>
         </div>
     );

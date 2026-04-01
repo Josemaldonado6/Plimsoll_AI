@@ -1,8 +1,6 @@
 class SoundFX {
     // Base64 Audio Data (Short, synthesized sounds to avoid external deps)
 
-    // "Click" - High tech blip
-    private static clickSound = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU...";
     // (Mock data for now, real implementation would use AudioContext or real files)
 
     // We'll use Web Audio API for synthetic sounds to be truly "Unicorn" (Procedural Audio)
