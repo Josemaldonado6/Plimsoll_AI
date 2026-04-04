@@ -371,7 +371,7 @@ class AIDraftSurveyor:
     """
 
     def __init__(self):
-        from app.engine.draft_calculator import DraftSurveyor
+        from app.engine.vision import DraftSurveyor
         self.legacy = DraftSurveyor()
         self._trinity = VisionTrinity()
 

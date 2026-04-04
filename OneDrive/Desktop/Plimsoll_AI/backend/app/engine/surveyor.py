@@ -42,7 +42,7 @@ class FrameSurveyor:
         if fps not in _VALID_FPS:
             raise ValueError(f"fps debe ser 1 o 2 para proteger la NPU Edge. Recibido: {fps}")
         self.fps = fps
-        self.vision = VisionTrinity(use_gpu=False)  # Edge: sin GPU discreta
+        self.vision = VisionTrinity()  # Edge: NPU-First Architecture
         self._results: List[Dict] = []
         self._is_running = False
         self._lock = threading.Lock()

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
-from app.engine.draft_calculator import DraftSurveyor
+from app.engine.vision import DraftSurveyor
 from app.services.storage import cloud_storage
 import logging
 
