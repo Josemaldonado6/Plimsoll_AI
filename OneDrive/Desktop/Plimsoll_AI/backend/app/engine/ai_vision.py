@@ -375,22 +375,17 @@ class AIDraftSurveyor:
         self.legacy = DraftSurveyor()
         self._trinity = VisionTrinity()
 
-    def process_video(self, video_path: str) -> Dict:
+    async def process_video(self, video_path: str) -> Dict:
         """
         Procesa un archivo MP4 extraído de la tarjeta SD del DJI Air 3S.
         Ejecuta el pipeline OpenVINO INT8 a 1 FPS.
         """
-        import asyncio as _asyncio
         from app.engine.surveyor import FrameSurveyor
 
         surveyor = FrameSurveyor(fps=1)
         surveyor.vision = self._trinity  # compartir instancia ya cargada
 
-        loop = _asyncio.new_event_loop()
-        try:
-            results = loop.run_until_complete(surveyor.process_video(video_path))
-        finally:
-            loop.close()
+        results = await surveyor.process_video(video_path)
 
         if not results:
             return {"error": "Sin cuadros válidos en el video."}

@@ -19,6 +19,7 @@
 # constituye un delito federal.
 # -----------------------------------------------------------------------------
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from typing import Dict, List
 from fastapi.responses import FileResponse
 from app.engine.reporter import PDFGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +27,7 @@ from sqlalchemy import select
 from app.engine.ai_vision import AIDraftSurveyor
 from app.db.database import get_db, engine, Base
 from app.db.models import Survey
+from app.engine.omniscient import omniscient
 import shutil
 import os
 import asyncio
@@ -40,9 +42,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 surveyor = AIDraftSurveyor()
 
-# Startups ensure data directory exists (Volume mounted at /data)
-DATA_DIR = "/data"
+# Startups ensure data directory exists
+# Using relative path './data' which is safer for Windows dev than absolute '/data'
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
 os.makedirs(DATA_DIR, exist_ok=True)
+logger.info(f"DATA_DIR RESOLVED TO: {DATA_DIR}")
 
 # Create tables on startup (for MVP simplicity)
 @router.on_event("startup")
@@ -67,7 +71,13 @@ async def analyze_draft(video: UploadFile = File(...), db: AsyncSession = Depend
             shutil.copyfileobj(video.file, buffer)
 
         # Process video
-        result = surveyor.process_video(file_path)
+        result = await surveyor.process_video(file_path)
+
+        # [NEW] Robust Error Propagation
+        # If the engine failed (e.g., no frames), don't try to save to DB, return error immediately
+        if "error" in result:
+            logger.error(f"Analysis Engine Error: {result['error']}")
+            raise HTTPException(status_code=422, detail=result["error"])
 
         # Save to Database
         db_survey = Survey(
@@ -87,7 +97,12 @@ async def analyze_draft(video: UploadFile = File(...), db: AsyncSession = Depend
         result["id"] = db_survey.id
         return result
 
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logger.error(f"Analysis Failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/surveys/{survey_id}/pdf")
@@ -163,3 +178,81 @@ async def get_history(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Survey).order_by(Survey.timestamp.desc()))
     surveys = result.scalars().all()
     return surveys
+
+    
+    result = await db.execute(select(Survey).order_by(Survey.timestamp.desc()))
+    surveys = result.scalars().all()
+    return surveys
+    
+@router.get("/ship/{imo_number}")
+async def get_ship_details(imo_number: str):
+    """
+    Returns OSINT data for a specific ship and initializes the Physics Engine.
+    """
+    try:
+        # Trigger initialization in the DraftSurveyor
+        ship_data = surveyor.legacy.initialize_vessel(imo_number)
+        return ship_data
+    except Exception as e:
+        logger.error(f"Failed to fetch and initialize ship data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+from pydantic import BaseModel
+
+class CalibrationRequest(BaseModel):
+    pixel_dist: int
+    known_height_m: float
+
+class EnvironmentConfig(BaseModel):
+    density: float
+    draft_fwd: float = None
+    draft_aft: float = None
+
+class HydrostaticTableRequest(BaseModel):
+    lbp: float
+    tables: Dict[str, List[float]]
+
+@router.post("/ship/{imo_number}/hydrostatics")
+async def set_ship_hydrostatics(imo_number: str, data: HydrostaticTableRequest):
+    """
+    Ingests vessel-specific hydrostatic tables for advanced displacement calculation.
+    """
+    try:
+        res = surveyor.legacy.set_vessel_hydrostatics({
+            "lbp": data.lbp,
+            "tables": data.tables
+        })
+        return res
+    except Exception as e:
+        logger.error(f"Failed to ingest hydrostatics for {imo_number}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/environment")
+async def set_environment(data: EnvironmentConfig):
+    """
+    Updates the physical environment parameters (Density, Trim).
+    """
+    try:
+        # Update the surveyor (AIDraftSurveyor -> legacy DraftSurveyor)
+        res = surveyor.legacy.set_environment_params(
+            density=data.density,
+            draft_fwd=data.draft_fwd,
+            draft_aft=data.draft_aft
+        )
+        return {"status": "success", "physics_state": res}
+    except Exception as e:
+        logger.error(f"Failed to update environment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/calibrate")
+async def calibrate_engine(data: CalibrationRequest):
+    """
+    Updates the pixel-to-meter scale based on user input.
+    """
+    try:
+        # Access the legacy drafted surveyor instance within the AI wrapper
+        res = surveyor.legacy.set_calibration(data.pixel_dist, data.known_height_m)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
