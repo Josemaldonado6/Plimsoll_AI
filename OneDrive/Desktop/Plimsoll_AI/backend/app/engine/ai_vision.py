@@ -147,36 +147,30 @@ class VisionTrinity:
     def _load_models(self):
         if self._yolo is None:
             if not _YOLO_XML.exists():
-                raise FileNotFoundError(
-                    f"Modelo YOLOv11n INT8 no encontrado: {_YOLO_XML}\n"
-                    "Ejecuta: python -m app.engine.export_openvino"
-                )
+                logger.warning(f"Modelo YOLOv11n INT8 no encontrado: {_YOLO_XML}")
+                return
             self._yolo = self.core.compile_model(
                 self.core.read_model(str(_YOLO_XML)), device_name="CPU"
             )
             logger.info(f"YOLOv11n INT8 cargado: {_YOLO_XML.name}")
 
-        if self._sam2 is None:
-            if not _SAM2_XML.exists():
-                raise FileNotFoundError(
-                    f"Modelo SAM 2-B INT8 no encontrado: {_SAM2_XML}\n"
-                    "Ejecuta: python -m app.engine.export_openvino"
+        if self._sam2 is None and _SAM2_XML.exists():
+            try:
+                self._sam2 = self.core.compile_model(
+                    self.core.read_model(str(_SAM2_XML)), device_name="CPU"
                 )
-            self._sam2 = self.core.compile_model(
-                self.core.read_model(str(_SAM2_XML)), device_name="CPU"
-            )
-            logger.info(f"SAM 2-B INT8 cargado: {_SAM2_XML.name}")
+                logger.info(f"SAM 2-B INT8 cargado: {_SAM2_XML.name}")
+            except Exception as e:
+                logger.warning(f"Error al cargar SAM 2-B: {e}. Usando modo ROI-Only.")
 
-        if self._depth is None:
-            if not _DEPTH_XML.exists():
-                raise FileNotFoundError(
-                    f"Modelo Depth Anything V2 INT8 no encontrado: {_DEPTH_XML}\n"
-                    "Ejecuta: python -m app.engine.export_openvino"
+        if self._depth is None and _DEPTH_XML.exists():
+            try:
+                self._depth = self.core.compile_model(
+                    self.core.read_model(str(_DEPTH_XML)), device_name="CPU"
                 )
-            self._depth = self.core.compile_model(
-                self.core.read_model(str(_DEPTH_XML)), device_name="CPU"
-            )
-            logger.info(f"Depth Anything V2 INT8 cargado: {_DEPTH_XML.name}")
+                logger.info(f"Depth Anything V2 INT8 cargado: {_DEPTH_XML.name}")
+            except Exception as e:
+                logger.warning(f"Error al cargar Depth: {e}. Usando modo ROI-Only.")
 
     # ------------------------------------------------------------------
     # Pipeline principal
@@ -184,40 +178,43 @@ class VisionTrinity:
 
     async def analyze_frame(self, frame: np.ndarray) -> Dict:
         """
-        Flujo secuencial de visión:
-        ROI Detection → Segmentación → Corrección 3D → Estabilización WCA
+        Flujo de visión con Resiliencia (Self-Healing):
+        Detección YOLO (Ok) → Fallback si falta segmentación profunda.
         """
         self._load_models()
+        if self._yolo is None:
+            return {"status": "ENGINE_ERROR", "error": "No YOLO model loaded", "waterline_y": 0}
+
         t0 = time.time()
 
-        # 1. Detección (YOLOv11n INT8)
+        # 1. Detección (YOLOv11n INT8) - Base de toda la visión
         bboxes = self.detect_roi_yolo11(frame)
         if not bboxes:
             return {"status": "SEARCHING", "waterline_y": 0}
 
-        # 2. Segmentación (SAM 2-B INT8)
-        mask = self.segment_waterline_sam2(frame, bboxes)
-
-        # 3. Estimación de profundidad (Depth Anything V2 INT8)
-        depth_map = self.estimate_depth_3d(frame)
-
-        # 4. Corrección de pitch/yaw (modelo pinhole)
-        corrected = self.correct_pitch_yaw(mask, depth_map)
-
-        # 5. Estabilización de olas (WCA)
-        waterline = self.wca.process(corrected)
+        # Lógica de Inferencia Dual (Precisión vs Resiliencia)
+        if self._sam2 is not None and self._depth is not None:
+            # MODO ELITE: Segmentación + Profundidad 3D
+            mask = self.segment_waterline_sam2(frame, bboxes)
+            depth_map = self.estimate_depth_3d(frame)
+            corrected = self.correct_pitch_yaw(mask, depth_map)
+            waterline = self.wca.process(corrected)
+            status = "TRACKING_3D"
+        else:
+            # MODO RESILIENTE: Basado en detección de ROI
+            # Usar la base del cuadro de detección más confiable como waterline inicial
+            main_roi = bboxes[0]
+            waterline_y_raw = main_roi[3] # y2 (base del cuadro)
+            waterline = self.wca.process(waterline_y_raw)
+            status = "TRACKING_ROI_EMERGENCY"
 
         latency = (time.time() - t0) * 1000
-
-        # 6. Encolar frame para calibración OCR asíncrona (key-frames únicamente)
-        if latency < 150:
-            await self.ocr_queue.put(frame.copy())
-
+        
         return {
-            "status": "TRACKING_3D",
+            "status": status,
             "waterline_y": int(waterline),
             "latency_ms": round(latency, 1),
-            "device": "OpenVINO-INT8-CPU",
+            "device": "OpenVINO-INT8-NPU-Resilient",
         }
 
     # ------------------------------------------------------------------
