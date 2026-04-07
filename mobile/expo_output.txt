@@ -1,0 +1,3 @@
+﻿Starting project at C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\mobile
+ΓÇ║ Port 8081 is being used by another process
+ΓÇ║ Skipping dev server

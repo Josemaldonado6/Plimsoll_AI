@@ -1,0 +1,42 @@
+{
+    "nhnf_schema_v1": {
+        "metadata": {
+            "version": "1.0-VISION",
+            "standard": "Plimsoll-Singularity-Alpha",
+            "description": "Volumetric hull reconstruction data schema for zero-manual-input displacement proof."
+        },
+        "spatial_nodes": {
+            "hull_points": "Array<Vector3>",
+            "mesh_density": "integer",
+            "neural_confidence": "float",
+            "reconstruction_latency_ms": "integer"
+        },
+        "volumetric_state": {
+            "mean_draft_plane": {
+                "equation": "Plane",
+                "normal": "Vector3",
+                "center_of_flotation": "Vector3"
+            },
+            "submerged_volume": "float",
+            "buoyancy_center": "Vector3",
+            "metacentric_height": "float"
+        },
+        "signal_verification": {
+            "wca_v3_status": "boolean",
+            "spectral_water_noise_floor": "float",
+            "blockchain_notary": {
+                "hash_algo": "SHA-3-512",
+                "merkle_root": "string",
+                "timestamp_authority": "string"
+            }
+        },
+        "autonomous_payloads": {
+            "drone_swarm_ids": "Array<UUID>",
+            "sensor_fusion": [
+                "Optical (8K)",
+                "LiDAR (10cm precision)",
+                "Sonar (Submerged Keel Tracking)"
+            ]
+        }
+    }
+}

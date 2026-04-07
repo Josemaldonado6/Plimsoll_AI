@@ -1,0 +1,56 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests\test_global_standard.py ....F                                      [100%]
+
+================================== FAILURES ===================================
+_______________ TestGlobalStandard.test_erp_gateway_sap_export ________________
+
+self = <test_global_standard.TestGlobalStandard object at 0x000002847CEE3A10>
+
+    def test_erp_gateway_sap_export(self):
+        """
+        Verifies that the SAP export matches the maritime logistics module schema.
+        """
+        mock_survey = Survey(
+            id=456,
+            timestamp=datetime.utcnow(),
+            draft_mean=8.123,
+            hash_seal="another_fake_hash"
+        )
+    
+        sap_data = erp_gateway.export_to_sap(mock_survey)
+    
+        assert sap_data["OBJECT_TYPE"] == "MARITIME_SURVEY"
+>       assert sap_data["DATA"]["DRAFT_MM"] == 8123
+E       assert 8122 == 8123
+
+tests\test_global_standard.py:86: AssertionError
+============================== warnings summary ===============================
+app\api\endpoints.py:49
+  C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend\app\api\endpoints.py:49: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @router.on_event("startup")
+
+app\api\drone.py:132
+  C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend\app\api\drone.py:132: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @router.on_event("startup")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_global_standard.py::TestGlobalStandard::test_erp_gateway_sap_export
+=================== 1 failed, 4 passed, 2 warnings in 0.12s ===================

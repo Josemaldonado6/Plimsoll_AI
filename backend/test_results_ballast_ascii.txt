@@ -1,0 +1,56 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\joseu\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 0 items / 1 error
+
+=================================== ERRORS ====================================
+_______________ ERROR collecting app/tests/test_ballast_api.py ________________
+app\tests\test_ballast_api.py:3: in <module>
+    from app.main import app
+app\main.py:23: in <module>
+    from app.api import endpoints, drone, quote, stream, omniscient, ballast
+app\api\__init__.py:6: in <module>
+    from . import ballast
+app\api\ballast.py:8: in <module>
+    plc_bridge = BallastPLCBridge()
+                 ^^^^^^^^^^^^^^^^^^
+app\engine\ballast_bridge.py:19: in __init__
+    self.client = AsyncModbusTcpClient(host, port=port)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\pymodbus\client\tcp.py:91: in __init__
+    ModbusBaseClient.__init__(
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\pymodbus\client\base.py:38: in __init__
+    self.ctx = TransactionManager(
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\pymodbus\transaction\transaction.py:47: in __init__
+    super().__init__(params, is_server, is_sync=self.is_sync)
+..\..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\pymodbus\transport\transport.py:170: in __init__
+    self.loop = asyncio.get_running_loop()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   RuntimeError: no running event loop
+============================== warnings summary ===============================
+app\api\endpoints.py:49
+  C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend\app\api\endpoints.py:49: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @router.on_event("startup")
+
+app\api\drone.py:92
+  C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend\app\api\drone.py:92: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @router.on_event("startup")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR app/tests/test_ballast_api.py - RuntimeError: no running event loop
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+======================== 2 warnings, 1 error in 4.32s =========================

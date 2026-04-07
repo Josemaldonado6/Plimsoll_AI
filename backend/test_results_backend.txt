@@ -1,0 +1,35 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\joseu\OneDrive\Desktop\Plimsoll_AI\backend
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+app\tests\test_physics_kernel.py ..F.                                    [100%]
+
+================================== FAILURES ===================================
+____________________ test_full_survey_calculation_accuracy ____________________
+
+    def test_full_survey_calculation_accuracy():
+        """Verify the final displacement calculation including FTC and STC."""
+        architect = NavalArchitect(lbp=200.0, hydrostatic_data=MOCK_HYDRO_DATA)
+    
+        # Standard Case
+        result = architect.calculate_survey(
+            fwd_obs=8.0, aft_obs=8.5, mid_obs=8.2,
+            dist_fwd=2.0, dist_aft=2.0, dist_mid=0.0,
+            lbp=180.0, observed_density=1.025
+        )
+    
+        # Displacement should be around 30k-35k for ~8.2m draft
+        assert 30000 < result['calculated_displacement'] < 45000
+        assert "First_Trim_Correction" in result['audit_trail'][2]['step'] # Check step order
+>       assert len(result['audit_trail']) == 4 # 4 major logging steps
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert 5 == 4
+E        +  where 5 = len([{'formula': 'Corr = (Dist * ApparentTrim) / LBM', 'inputs': {'aft_obs': 8.5, 'fwd_obs': 8.0, 'lbm': 180.0}, 'outputs'..., 'outputs': {'corrected_density': 1.025, 'final_displacement': 31212.37332712109}, 'step': 'Density_Correction', ...}])
+
+app\tests\test_physics_kernel.py:56: AssertionError
+=========================== short test summary info ===========================
+FAILED app/tests/test_physics_kernel.py::test_full_survey_calculation_accuracy
+========================= 1 failed, 3 passed in 1.58s =========================

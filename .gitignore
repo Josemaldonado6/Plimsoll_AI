@@ -1,0 +1,29 @@
+venv
+__pycache__
+.env
+*.mp4
+*.pdf
+*.jpg
+*.db
+data/
+node_modules
+dist
+.DS_Store
+.idea
+.vscode
+*.log
+coverage
+
+# AI Models (Too large for GitHub)
+*.pt
+*.onnx
+*.bin
+*.xml
+data/models/
+archive_v3_legacy/
+
+# Diagnostic Scripts (Contain secrets)
+check_supa.py
+backend/migrate_supa.py
+backend/check_supa.py
+migrate_supa.py
