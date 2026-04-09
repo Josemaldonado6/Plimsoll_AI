@@ -121,7 +121,7 @@ async def analyze_draft(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/surveys/{survey_id}/pdf")
-async def generate_pdf(survey_id: int, lang: str = "en", db: AsyncSession = Depends(get_db)):
+async def generate_pdf(survey_id: int, lang: str = "en", net_cargo: float = None, db: AsyncSession = Depends(get_db)):
     # Fetch survey from DB
     result = await db.execute(select(Survey).where(Survey.id == survey_id))
     survey = result.scalars().first()
@@ -152,6 +152,9 @@ async def generate_pdf(survey_id: int, lang: str = "en", db: AsyncSession = Depe
         "confidence": float(survey.confidence) if survey.confidence is not None else 0.0,
         "sea_state": str(survey.sea_state or "Unknown")
     }
+
+    if net_cargo is not None:
+        survey_data["net_cargo_weight"] = net_cargo
     
     try:
         print(f"[PDF DEBUG] Survey Data: {survey_data}", flush=True)

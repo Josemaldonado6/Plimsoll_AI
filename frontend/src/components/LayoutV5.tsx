@@ -9,10 +9,12 @@ import {
   Database,
   Archive,
   LogOut,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Globe2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export default function LayoutV5({ children }: { children: React.ReactNode }) {
   const { 
@@ -22,6 +24,14 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
     isOnline,
     vesselInfo 
   } = useStore();
+  const { t, i18n } = useTranslation();
+
+  const handleLangToggle = () => {
+    const langs = ['en', 'es', 'pt', 'zh'];
+    const current = i18n.language || 'en';
+    const nextIdx = (langs.indexOf(current) + 1) % langs.length;
+    i18n.changeLanguage(langs[nextIdx]);
+  };
 
   const missionTabs: { id: 'Identity' | 'Capture' | 'Analysis' | 'Certify', icon: any, label: string }[] = [
     { id: 'Identity', icon: Fingerprint, label: 'Ops Hub' },
@@ -61,10 +71,26 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <button title="Operator Preferences" className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded">
+          <button 
+            onClick={handleLangToggle}
+            title={`Language: ${i18n.language?.toUpperCase() || 'EN'}`} 
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded uppercase border border-white/5"
+          >
+            <Globe2 size={14} /> {i18n.language?.substring(0, 2) || 'EN'}
+          </button>
+          <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+          <button 
+             onClick={() => alert(t('system.preferences_locked', 'Preferences locked by Administrator.'))}
+             title="Operator Preferences" 
+             className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded"
+          >
             <SlidersHorizontal size={20} />
           </button>
-          <button title="Audit Vault (History)" className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded">
+          <button 
+             onClick={() => alert(t('system.vault_restricted', 'Audit Vault access restricted. Pending DNV clearance.'))}
+             title="Audit Vault (History)" 
+             className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded"
+          >
             <Archive size={20} />
           </button>
           <div className="h-8 w-[1px] bg-white/10 mx-2"></div>

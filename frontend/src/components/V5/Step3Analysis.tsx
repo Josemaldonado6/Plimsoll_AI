@@ -64,7 +64,7 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
                         </div>
                         <div>
                             <h2 className="text-slate-500 font-black text-xs uppercase tracking-[0.2em]">{t('dashboard.net_cargo_weight')}</h2>
-                            <p className="text-white font-headline font-black text-xl tracking-tight uppercase">Physics Stabilization Active</p>
+                            <p className="text-white font-headline font-black text-xl tracking-tight uppercase">{t('v5.physics_stability', 'Physics Stabilization Active')}</p>
                         </div>
                     </div>
 
@@ -100,7 +100,7 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
                     <TrendingDown className="text-[#00e639]" size={24} />
                     <div>
                         <p className="text-slate-500 font-black text-[8px] uppercase tracking-widest">Physics Stability</p>
-                        <p className="text-[#00e639] font-black text-sm uppercase">Wave Suppression Active</p>
+                        <p className="text-[#00e639] font-black text-sm uppercase">{t('v5.wave_suppression', 'Wave Suppression Active')}</p>
                     </div>
                 </div>
                 <div className="flex gap-10">
@@ -148,35 +148,32 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                            <span className="text-slate-500 font-black text-[8px] uppercase tracking-widest">Pixel Scale</span>
-                            <p className="text-white font-mono font-bold text-xs mt-1">1.0422</p>
+                    <div className="flex-1 flex justify-between gap-4">
+                        <div className="flex-1 border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm">
+                            <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">{t('v5.data_reliability', 'Data Reliability')}</div>
+                            <div className="text-2xl text-white font-black">{Math.round((latestScan.data_reliability || 0) * 100)}%</div>
                         </div>
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                            <span className="text-slate-500 font-black text-[8px] uppercase tracking-widest">Sensor Scan</span>
-                            <p className="text-white font-mono font-bold text-xs mt-1">SUCCESS_{latestScan.phase}</p>
+                        <div className="flex-1 border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm">
+                            <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">{t('v5.audit_trail', 'Audit Trail')}</div>
+                            <div className="text-2xl text-[#00e639] font-black">{t('v5.success', 'SUCCESS')}</div>
                         </div>
                     </div>
 
                     <div className="p-4 bg-[#e9c349]/5 border border-[#e9c349]/20 rounded-2xl flex items-start gap-4">
                         <Zap size={18} className="text-[#e9c349] shrink-0" />
-                        <p className="text-slate-400 text-[9px] font-medium leading-relaxed italic">
-                            System successfully suppressed high-frequency water noise. Displacement calculated via {vesselInfo.name} hydrostatic baseline.
+                        <p className="text-white text-sm mt-3 border-l-2 border-[#e9c349] pl-4 italic">
+                          {t('v5.system_suppressed', 'System successfully suppressed high-frequency water noise. Displacement calculated via')} <strong>{t('v5.kalman_convergence', 'Kalman Filter Convergence')}</strong>.
                         </p>
                     </div>
 
-                    <button 
-                        onClick={onNext}
-                        className="w-full py-6 rounded-2xl bg-[#e9c349] text-black font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-98 transition-all shadow-2xl"
-                    >
-                        INITIALIZE CERTIFICATION 
-                        <ArrowRight size={20} />
+                    <button onClick={onNext} className="w-full py-5 rounded-xl bg-white text-black font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#e9c349] transition-colors mt-6 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                        {t('v5.init_cert', 'Initialize Certification')} <ArrowRight size={20} />
                     </button>
                     
                     <div className="text-center">
-                        <button className="text-[9px] font-black text-slate-600 uppercase tracking-widest hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto">
-                            <Info size={12} /> RE-RUN PHYSICAL MODEL
+                        <button className="text-slate-500 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 mx-auto">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                            {t('v5.rerun_physical', 'Re-run Physical Model')}
                         </button>
                     </div>
                 </div>

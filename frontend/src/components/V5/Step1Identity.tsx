@@ -69,11 +69,11 @@ export default function Step1Identity() {
         <div className="lg:col-span-7 space-y-8">
           <div>
             <h2 className="text-4xl font-black text-white tracking-tighter uppercase font-headline">
-              Phase 01: <span className="text-[#e9c349]">Campaign Setup</span>
+              Phase 01: <span className="text-[#e9c349]">{t('v5.campaign_setup', 'Campaign Setup')}</span>
             </h2>
             <p className="text-slate-500 mt-2 font-headline text-xs uppercase tracking-[0.2rem] flex items-center gap-2">
               <Zap size={12} className="text-[#e9c349]" /> 
-              Acquire target vessel data or resume active draft operations
+              {t('v5.acquire_target', 'Acquire target vessel data or resume active draft operations')}
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export default function Step1Identity() {
           {operations.length > 0 && (
             <div className="space-y-4 animate-fade-in-up">
               <h3 className="text-[#e9c349] font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-                <Anchor size={14} /> Active Operations
+                <Anchor size={14} /> {t('v5.active_operations', 'Active Operations')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {operations.map(op => (
@@ -103,7 +103,7 @@ export default function Step1Identity() {
                       </div>
                     </div>
                     <div className="mt-3 text-xs text-slate-400 font-mono">
-                      Log Entries: {op.scans.length} ({(op.scans[op.scans.length - 1]?.phase) || 'NO_DATA'})
+                      {t('v5.log_entries', 'Log Entries')}: {op.scans.length} ({(op.scans[op.scans.length - 1]?.phase) || 'NO_DATA'})
                     </div>
                   </button>
                 ))}
@@ -227,7 +227,7 @@ export default function Step1Identity() {
                 : "bg-slate-800 text-slate-600 opacity-50 grayscale cursor-not-allowed"
             )}
           >
-            INITIALIZE NEW OPERATION
+            {t('v5.init_new_op', 'INITIALIZE NEW OPERATION')}
             <ArrowRight size={24} />
           </button>
         </div>

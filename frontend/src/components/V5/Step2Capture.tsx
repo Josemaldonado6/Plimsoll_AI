@@ -86,7 +86,9 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
 
             {/* PHASE SELECTION UI */}
             <div className="mt-8 space-y-3">
-               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">Operation Phase</h4>
+               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">
+                 {t('v5.operation_phase', 'Operation Phase')}
+               </h4>
                {(['INITIAL', 'INTERIM', 'FINAL'] as SurveyPhase[]).map(phase => (
                  <button
                    key={phase}
@@ -98,7 +100,9 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
                        : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10"
                    )}
                  >
-                   <span className="font-black text-[10px] uppercase tracking-widest">{phase} CONDITION</span>
+                   <span className="font-black text-[10px] uppercase tracking-widest">
+                     {phase} {t('v5.condition', 'CONDITION')}
+                   </span>
                    {selectedPhase === phase && <CheckCircle2 size={14} />}
                  </button>
                ))}
@@ -179,8 +183,8 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
                             <RotateCcw size={64} className="text-[#e9c349] animate-spin-slow" />
                         </div>
                         <div className="text-center space-y-2">
-                             <h4 className="text-white font-black uppercase tracking-[0.4em] italic leading-none">Hydrostatic Matrix</h4>
-                             <p className="text-[#e9c349] animate-pulse font-mono text-[8px] uppercase tracking-[0.2rem]">Aligning Sensor Data</p>
+                             <h4 className="text-white font-black uppercase tracking-[0.4em] italic leading-none">{t('v5.hydrostatic_matrix', 'Hydrostatic Matrix')}</h4>
+                             <p className="text-[#e9c349] animate-pulse font-mono text-[8px] uppercase tracking-[0.2rem]">{t('v5.aligning_sensor', 'Aligning Sensor Data')}</p>
                         </div>
                     </div>
                 </div>

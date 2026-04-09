@@ -86,7 +86,7 @@ export default function App() {
                 const activeOp = useStore.getState().activeOperationId;
                 if (activeOp) {
                     useStore.getState().addScanToOperation(activeOp, {
-                        id: Date.now(),
+                        id: finalResult.id || Date.now(),
                         phase: phase,
                         filename: file.name,
                         draft_mean: finalResult.draft_mean,
@@ -110,10 +110,17 @@ export default function App() {
     }
 
     // MISSION CORE: EXPORT ENGINE
-    const handleDownload = async (id: number) => {
+    const handleDownload = async (id: number, netCargo?: number) => {
         if (!token) return;
         try {
-            const response = await axios.get(getApiUrl(`/api/surveys/${id}/pdf?lang=en`), {
+            const { i18n } = useTranslation();
+            const lang = i18n.language || 'en';
+            let urlStr = `/api/surveys/${id}/pdf?lang=${lang}`;
+            if (netCargo !== undefined) {
+                urlStr += `&net_cargo=${netCargo}`;
+            }
+
+            const response = await axios.get(getApiUrl(urlStr), {
                 responseType: 'blob',
                 headers: {
                     'Accept': 'application/pdf',
