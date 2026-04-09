@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, Shield, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-import { useStore } from '../store/useStore';
-
-const getApiUrl = (path: string) => {
-    const isDev = window.location.port === "5173" || window.location.hostname === "localhost";
-    const baseUrl = isDev ? 'http://127.0.0.1:8000' : '';
-    return `${baseUrl}${path}`;
-};
+import { useStore, getApiUrl } from '../store/useStore';
 
 export const Login: React.FC = () => {
     const login = useStore((state) => state.login);

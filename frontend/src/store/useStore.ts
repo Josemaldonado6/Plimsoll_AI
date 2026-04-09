@@ -155,23 +155,17 @@ export const useStore = create<PlimsollState>()(
 
 /**
  * [HYBRID_GATEWAY] Centralized API Routing Manager
- * This function determines if a request should go to the Global Vercel API
- * or the Local Intel Ultra 9 Edge Hub.
+ * Routes to local uvicorn in dev, or the remote Edge Hub (localtunnel / cloud) in production.
  */
 export const getApiUrl = (path: string) => {
     const { edgeUrl } = useStore.getState();
     const isDev = typeof window !== 'undefined' && (window.location.port === "5173" || window.location.hostname === "localhost");
     
-    // EDGE-SPECIFIC ENDPOINTS (NPU Intensive)
-    const edgeEndpoints = ['/api/analyze', '/api/environment', '/api/calibrate', '/api/ship', '/api/ballast', '/api/drone'];
-    const isEdgeEndpoint = edgeEndpoints.some(ep => path.startsWith(ep));
+    // Ensure path starts with / for URL construction
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     
-    if (isEdgeEndpoint) {
-        // Ensure path starts with / for URL construction
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        return `${edgeUrl}${normalizedPath}`;
-    }
+    // Si estamos en Vercel (Producción), usar SIEMPRE el edgeUrl porque no hay Python backend en Vercel.
+    const base = isDev ? 'http://localhost:8000' : (edgeUrl || "https://plimsoll-official-hub.loca.lt");
     
-    // CLOUD / AUTH ENDPOINTS (Supabase)
-    return isDev ? `http://localhost:8000${path}` : path;
+    return `${base.replace(/\/$/, '')}${normalizedPath}`;
 }
