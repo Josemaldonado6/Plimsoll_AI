@@ -159,17 +159,16 @@ export const useStore = create<PlimsollState>()(
 
 /**
  * [HYBRID_GATEWAY] Centralized API Routing Manager
- * Routes to local uvicorn in dev, or the remote Edge Hub (localtunnel / cloud) in production.
+ * Routes to local uvicorn in dev, or local relative path in production for Vercel Reverse Proxy.
  */
 export const getApiUrl = (path: string) => {
-    const { edgeUrl } = useStore.getState();
     const isDev = typeof window !== 'undefined' && (window.location.port === "5173" || window.location.hostname === "localhost");
     
     // Ensure path starts with / for URL construction
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     
-    // Si estamos en Vercel (Producción), usar SIEMPRE el edgeUrl porque no hay Python backend en Vercel.
-    const base = isDev ? 'http://localhost:8000' : (edgeUrl || "https://plimsoll-official-hub.loca.lt");
+    // Si estamos en Vercel (Producción), usamos rutas relativas para pasar por el Proxy Reverso
+    const base = isDev ? 'http://localhost:8000' : '';
     
-    return `${base.replace(/\/$/, '')}${normalizedPath}`;
+    return `${base}${normalizedPath}`;
 }
