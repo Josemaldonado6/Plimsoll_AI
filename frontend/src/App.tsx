@@ -26,7 +26,7 @@ axios.defaults.headers.common['Bypass-Tunnel-Reminder'] = 'true';
 axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
 
 export default function App() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const {
         showLanding, setShowLanding,
         activeTab, setActiveTab,
@@ -113,7 +113,6 @@ export default function App() {
     const handleDownload = async (id: number, netCargo?: number) => {
         if (!token) return;
         try {
-            const { i18n } = useTranslation();
             const lang = i18n.language || 'en';
             let urlStr = `/api/surveys/${id}/pdf?lang=${lang}`;
             if (netCargo !== undefined) {
