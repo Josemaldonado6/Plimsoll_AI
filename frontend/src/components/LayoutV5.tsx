@@ -1,15 +1,15 @@
 import React from 'react';
 import { 
   ShieldCheck, 
-  Terminal, 
-  Settings, 
-  User, 
   Fingerprint, 
   Radar, 
   Activity, 
   Verified, 
   Cpu,
-  Monitor
+  Database,
+  Archive,
+  LogOut,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../lib/utils';
@@ -24,11 +24,18 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
   } = useStore();
 
   const missionTabs: { id: 'Identity' | 'Capture' | 'Analysis' | 'Certify', icon: any, label: string }[] = [
-    { id: 'Identity', icon: Fingerprint, label: 'Identity' },
-    { id: 'Capture', icon: Radar, label: 'Capture' },
-    { id: 'Analysis', icon: Activity, label: 'Analysis' },
-    { id: 'Certify', icon: Verified, label: 'Certify' },
+    { id: 'Identity', icon: Fingerprint, label: 'Ops Hub' },
+    { id: 'Capture', icon: Radar, label: 'Scan' },
+    { id: 'Analysis', icon: Activity, label: 'Matrix' },
+    { id: 'Certify', icon: Verified, label: 'Manifest' },
   ];
+
+  const handleEasterEgg = (e: React.MouseEvent) => {
+    if (e.detail === 5) {
+      const newUrl = prompt("SOVEREIGN OVERRIDE:\nEnter local tunnel URL:", useStore.getState().edgeUrl);
+      if (newUrl) useStore.getState().setEdgeUrl(newUrl);
+    }
+  };
 
   return (
     <div className="bg-[#0a0e1a] text-[#dfe2f3] h-screen flex flex-col font-body selection:bg-[#e9c349] selection:text-[#3c2f00] overflow-hidden">
@@ -36,8 +43,11 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
       {/* TOP APP BAR - ESTATUS GLOBAL */}
       <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0a0e1a] border-b border-[#e9c349]/5">
         <div className="flex items-center gap-8">
-          <h1 className="text-2xl font-black text-[#e9c349] tracking-tighter font-headline flex items-center gap-2">
-            PLIMSOLL AI <span className="text-[10px] bg-[#e9c349]/20 px-1.5 py-0.5 rounded tracking-widest">V5</span>
+          <h1 
+            onClick={handleEasterEgg}
+            className="text-2xl font-black text-[#e9c349] tracking-tighter font-headline flex items-center gap-2 cursor-pointer select-none"
+          >
+            PLIMSOLL SYSTEM <span className="text-[10px] bg-[#e9c349]/20 px-1.5 py-0.5 rounded tracking-widest text-[#e9c349]">V5</span>
           </h1>
           <nav className="hidden md:flex items-center gap-6">
             <div className="flex items-center gap-2 text-slate-500 font-headline text-[10px] uppercase tracking-[0.1rem]">
@@ -51,23 +61,27 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <button title="System Components" className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded">
-            <Settings size={20} />
+          <button title="Operator Preferences" className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded">
+            <SlidersHorizontal size={20} />
           </button>
-          <button title="Terminal Logic" className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded">
-            <Terminal size={20} />
+          <button title="Audit Vault (History)" className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded">
+            <Archive size={20} />
           </button>
           <div className="h-8 w-[1px] bg-white/10 mx-2"></div>
-          <button className="flex items-center gap-3 text-slate-500 hover:text-[#e9c349] group">
+          <button 
+            title="End Shift / Secure Logout"
+            onClick={() => useStore.getState().logout()}
+            className="flex items-center gap-3 text-slate-500 hover:text-red-500 transition-colors group"
+          >
             <div className="text-right">
-              <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-white transition-colors">
+              <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-red-500 transition-colors">
                 {user?.full_name?.split(' ')[0]}_01
               </div>
-              <div className="text-[8px] font-bold text-[#e9c349]/50 uppercase tracking-tighter">
-                {user?.tier}
+              <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">
+                END SHIFT
               </div>
             </div>
-            <User size={24} className="border border-white/5 p-0.5 rounded-full" />
+            <LogOut size={24} className="border border-white/5 p-1 rounded-full group-hover:border-red-500/50" />
           </button>
         </div>
       </header>
@@ -113,11 +127,11 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
           <div className="flex gap-6">
             <div className="flex flex-col items-center opacity-40">
               <Cpu size={14} />
-              <span className="text-[8px] font-bold mt-1 tracking-widest">CORTEX</span>
+              <span className="text-[8px] font-bold mt-1 tracking-widest">DATA_REL</span>
             </div>
             <div className="flex flex-col items-center opacity-40">
-              <Monitor size={14} />
-              <span className="text-[8px] font-bold mt-1 tracking-widest">HUB</span>
+              <Database size={14} />
+              <span className="text-[8px] font-bold mt-1 tracking-widest">LOCAL_DB</span>
             </div>
           </div>
           <div className="h-10 w-[1px] bg-white/5"></div>

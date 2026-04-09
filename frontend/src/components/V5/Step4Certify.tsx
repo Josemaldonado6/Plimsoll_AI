@@ -11,19 +11,39 @@ import {
   Verified
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { cn } from '../../lib/utils';
 
 
 export default function Step4Certify({ onExport, onReset }: { onExport: (id: number) => void, onReset: () => void }) {
 
-  const { currentResult, vesselInfo } = useStore();
+  const { operations, activeOperationId, vesselInfo } = useStore();
+  
+  const activeOp = operations.find(o => o.id === activeOperationId);
+  const latestScan = activeOp?.scans[activeOp.scans.length - 1];
 
-  if (!currentResult) return null;
+  if (!activeOp || !latestScan) return null;
 
-  // ENHANCED TELEMETRY BINDING
-  const coreDraft = currentResult?.draft_mean || 0;
+  // SOVEREIGN DIFFERENTIAL CALCULATION
+  const initialScan = activeOp.scans.find(s => s.phase === 'INITIAL');
+  const finalScan = activeOp.scans.find(s => s.phase === 'FINAL');
+  
   const tpc = 42.8;
-  const projectedWeight = currentResult?.net_cargo_weight || (coreDraft ? (coreDraft * 100 * tpc) - 5000 : 0);
-  const displayWeight = Math.max(0, projectedWeight);
+  let netCargo = 0;
+  let isFinalMath = false;
+
+  if (initialScan && finalScan) {
+      // Real Mathematical Difference
+      const initialDisp = (initialScan.draft_mean * 100 * tpc);
+      const finalDisp = (finalScan.draft_mean * 100 * tpc);
+      netCargo = Math.abs(finalDisp - initialDisp); // Absolute to handle loading or discharging
+      isFinalMath = true;
+  } else {
+      // Fallback projection based on the latest scan
+      const coreDraft = latestScan.draft_mean || 0;
+      netCargo = (coreDraft ? (coreDraft * 100 * tpc) - 5000 : 0);
+  }
+
+  const displayWeight = Math.max(0, netCargo);
 
   return (
     <div className="flex-1 flex flex-col p-8 md:p-12 animate-fade-in relative">
@@ -43,8 +63,8 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
                      Mission<br />Certified
                    </h2>
                    <div className="mt-6 flex flex-col items-center">
-                        <span className="text-slate-500 font-mono text-[10px] uppercase tracking-widest leading-none">Validation ID</span>
-                        <span className="text-[#00e639] font-mono text-[12px] font-bold mt-1 uppercase tracking-tighter">PLM_0X{currentResult.id?.toString().slice(-6) || '92A3FF'}</span>
+                        <span className="text-slate-500 font-mono text-[10px] uppercase tracking-widest leading-none">Operation ID</span>
+                        <span className="text-[#00e639] font-mono text-[12px] font-bold mt-1 uppercase tracking-tighter">{activeOp.id}</span>
                    </div>
                 </div>
             </div>
@@ -72,21 +92,23 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
 
                 <div className="grid grid-cols-2 gap-8 py-8 border-y border-white/5">
                     <div className="space-y-1">
-                        <span className="text-slate-500 font-black text-[9px] uppercase tracking-widest">NET_CARGO_WEIGHT</span>
+                        <span className="text-slate-500 font-black text-[9px] uppercase tracking-widest">
+                            {isFinalMath ? 'TRUE_NET_CARGO (FINAL - INITIAL)' : 'PROJECTED_NET_CARGO'}
+                        </span>
                         <div className="flex items-baseline gap-2">
-                             <p className="text-3xl font-black text-white">{Math.round(displayWeight).toLocaleString()}</p>
-                             <span className="text-[#e9c349] font-bold text-xs">t</span>
+                             <p className={cn("text-3xl font-black", isFinalMath ? "text-[#e9c349]" : "text-white")}>{Math.round(displayWeight).toLocaleString()}</p>
+                             <span className={cn("font-bold text-xs", isFinalMath ? "text-[#e9c349]" : "text-[#e9c349]/50")}>t</span>
                         </div>
                     </div>
                     <div className="space-y-1">
-                         <span className="text-slate-500 font-black text-[9px] uppercase tracking-widest">CONFIDENCE_RATING</span>
+                         <span className="text-slate-500 font-black text-[9px] uppercase tracking-widest">RELIABILITY_RATING</span>
                          <p className="text-3xl font-black text-[#00e639]">DNV_A+</p>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-4">
                     <button 
-                        onClick={() => currentResult.id && onExport(currentResult.id)}
+                        onClick={() => latestScan.id && onExport(latestScan.id)}
                         className="w-full py-6 rounded-2xl bg-[#e9c349] text-black font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-98 transition-all shadow-2xl"
                     >
                         <FileText size={24} /> 
@@ -109,7 +131,7 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
                         <img src="/logo.png" alt="Plimsoll" className="w-full h-full object-contain filter grayscale" />
                    </div>
                    <div className="text-left font-mono text-[8px] text-slate-700 leading-tight uppercase">
-                      Official Draft Survey Audit<br />Powered by Plimsoll Cortex V5
+                      Official Draft Survey Master Log<br />Powered by Plimsoll Sovereign Engine
                    </div>
                 </div>
                 

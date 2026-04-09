@@ -15,14 +15,26 @@ const indexedDBStorage = {
     },
 }
 
-export interface Survey {
-    id: number
-    filename: string
-    draft_mean: number
-    confidence: number
-    sea_state: string
-    timestamp: string
-    is_synced?: number
+export type SurveyPhase = 'INITIAL' | 'INTERIM' | 'FINAL';
+
+export interface ScanResult {
+    id: number;
+    phase: SurveyPhase;
+    filename: string;
+    draft_mean: number;
+    data_reliability: number; // Replaced confidence
+    sea_state: string;
+    timestamp: string;
+    is_synced?: number;
+}
+
+export interface Operation {
+    id: string;
+    vessel_name: string;
+    imo: string;
+    status: 'ACTIVE' | 'COMPLETED';
+    created_at: string;
+    scans: ScanResult[];
 }
 
 interface User {
@@ -34,7 +46,9 @@ interface User {
 interface PlimsollState {
     showLanding: boolean
     activeTab: 'Identity' | 'Capture' | 'Analysis' | 'Certify'
-    history: Survey[]
+    history: ScanResult[] // V3 legacy compliance (optional cleanup later)
+    operations: Operation[];
+    activeOperationId: string | null;
     theme: 'midnight' | 'daylight'
     isOnline: boolean
     currentResult: any | null
@@ -53,8 +67,10 @@ interface PlimsollState {
     // Actions
     setShowLanding: (show: boolean) => void
     setActiveTab: (tab: 'Identity' | 'Capture' | 'Analysis' | 'Certify') => void
-    setHistory: (history: Survey[]) => void
-    addSurvey: (survey: Survey) => void
+    createOperation: (vessel_name: string, imo: string) => string
+    setActiveOperation: (id: string) => void
+    addScanToOperation: (opId: string, scan: ScanResult) => void
+    completeOperation: (opId: string) => void
     setTheme: (theme: 'midnight') => void
     setIsOnline: (status: boolean) => void
     setCurrentResult: (result: any | null) => void
@@ -74,6 +90,8 @@ export const useStore = create<PlimsollState>()(
             showLanding: true,
             activeTab: "Identity",
             history: [],
+            operations: [],
+            activeOperationId: null,
             theme: 'midnight', // Defaulting to midnight for high-contrast field ops
             isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
             currentResult: null,
@@ -86,9 +104,34 @@ export const useStore = create<PlimsollState>()(
 
             setShowLanding: (show) => set({ showLanding: show }),
             setActiveTab: (tab) => set({ activeTab: tab }),
-            setHistory: (history) => set({ history }),
-            addSurvey: (survey) => set((state) => ({
-                history: [survey, ...state.history].slice(0, 50) // Keep last 50 for performance
+            
+            // Sovereignty Core Operations
+            createOperation: (vessel_name, imo) => {
+                const opId = `OP_${Date.now()}`;
+                set((state) => ({
+                    operations: [{
+                        id: opId,
+                        vessel_name,
+                        imo,
+                        status: 'ACTIVE',
+                        created_at: new Date().toISOString(),
+                        scans: []
+                    }, ...state.operations]
+                }));
+                return opId;
+            },
+            setActiveOperation: (id) => set({ activeOperationId: id }),
+            addScanToOperation: (opId, scan) => set((state) => ({
+                operations: state.operations.map(op => 
+                    op.id === opId 
+                        ? { ...op, scans: [...op.scans, scan] } 
+                        : op
+                )
+            })),
+            completeOperation: (opId) => set((state) => ({
+                operations: state.operations.map(op => 
+                    op.id === opId ? { ...op, status: 'COMPLETED' } : op
+                )
             })),
             setTheme: (theme) => set({ theme }),
             setIsOnline: (status) => set({ isOnline: status }),
@@ -147,6 +190,7 @@ export const useStore = create<PlimsollState>()(
                 showLanding: true,
                 activeTab: "Identity",
                 history: [],
+                activeOperationId: null,
                 theme: 'midnight'
             })
         }),

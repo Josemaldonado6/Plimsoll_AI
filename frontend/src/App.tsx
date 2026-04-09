@@ -57,7 +57,7 @@ export default function App() {
     }, [setIsOnline, syncDrafts]);
 
     // MISSION CORE: ANALYSIS ENGINE
-    const handleAnalyze = async (file: File) => {
+    const handleAnalyze = async (file: File, phase: 'INITIAL' | 'INTERIM' | 'FINAL') => {
         if (!file || !token) return;
 
         setIsAnalyzing(true);
@@ -82,16 +82,20 @@ export default function App() {
                 const finalResult = { ...response.data };
                 setCurrentResult(finalResult);
                 
-                // Persist to local history
-                useStore.getState().addSurvey({
-                    id: Date.now(),
-                    filename: file.name,
-                    draft_mean: finalResult.draft_mean,
-                    confidence: finalResult.confidence,
-                    sea_state: finalResult.sea_state,
-                    timestamp: new Date().toISOString(),
-                    is_synced: isOnline ? 1 : 0
-                });
+                // Persist to operation
+                const activeOp = useStore.getState().activeOperationId;
+                if (activeOp) {
+                    useStore.getState().addScanToOperation(activeOp, {
+                        id: Date.now(),
+                        phase: phase,
+                        filename: file.name,
+                        draft_mean: finalResult.draft_mean,
+                        data_reliability: finalResult.confidence,
+                        sea_state: finalResult.sea_state,
+                        timestamp: new Date().toISOString(),
+                        is_synced: isOnline ? 1 : 0
+                    });
+                }
 
                 if (isOnline) syncDrafts();
                 setActiveTab('Analysis'); // Move to Step 3 automatically after processing

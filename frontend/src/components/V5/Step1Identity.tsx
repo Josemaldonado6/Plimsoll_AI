@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function Step1Identity() {
   const { t } = useTranslation();
-  const { vesselInfo, setVesselInfo, setActiveTab } = useStore();
+  const { vesselInfo, setVesselInfo, setActiveTab, operations, createOperation, setActiveOperation } = useStore();
   const [imoSearch, setImoSearch] = useState(vesselInfo.imo || '');
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +39,15 @@ export default function Step1Identity() {
 
   const handleNext = () => {
     if (vesselInfo.imo) {
+      const opId = createOperation(vesselInfo.name || "UNKNOWN_VESSEL", vesselInfo.imo);
+      setActiveOperation(opId);
       setActiveTab('Capture');
     }
+  };
+
+  const handleResumeOperation = (opId: string) => {
+    setActiveOperation(opId);
+    setActiveTab('Capture');
   };
 
   return (
@@ -62,15 +69,49 @@ export default function Step1Identity() {
         <div className="lg:col-span-7 space-y-8">
           <div>
             <h2 className="text-4xl font-black text-white tracking-tighter uppercase font-headline">
-              Phase 01: <span className="text-[#e9c349]">Identity</span>
+              Phase 01: <span className="text-[#e9c349]">Campaign Setup</span>
             </h2>
             <p className="text-slate-500 mt-2 font-headline text-xs uppercase tracking-[0.2rem] flex items-center gap-2">
               <Zap size={12} className="text-[#e9c349]" /> 
-              Acquiring target vessel data from global maritime registry
+              Acquire target vessel data or resume active draft operations
             </p>
           </div>
 
-          <div className="relative group">
+          {/* ACTIVE OPERATIONS LIST */}
+          {operations.length > 0 && (
+            <div className="space-y-4 animate-fade-in-up">
+              <h3 className="text-[#e9c349] font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                <Anchor size={14} /> Active Operations
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {operations.map(op => (
+                  <button 
+                    key={op.id}
+                    onClick={() => handleResumeOperation(op.id)}
+                    className="p-4 rounded-2xl bg-[#1b1f2c] border border-white/5 hover:border-[#e9c349]/50 transition-all text-left group"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{op.id}</div>
+                        <div className="text-white font-black uppercase text-lg group-hover:text-[#e9c349] transition-colors">{op.vessel_name}</div>
+                      </div>
+                      <div className={cn(
+                        "text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded",
+                        op.status === 'COMPLETED' ? "bg-green-500/20 text-green-500" : "bg-blue-500/20 text-blue-500"
+                      )}>
+                        {op.status}
+                      </div>
+                    </div>
+                    <div className="mt-3 text-xs text-slate-400 font-mono">
+                      Log Entries: {op.scans.length} ({(op.scans[op.scans.length - 1]?.phase) || 'NO_DATA'})
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="relative group mt-8">
             <div className="absolute -inset-1 bg-gradient-to-r from-[#e9c349]/20 to-transparent blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
             <div className="relative bg-[#171b28] border border-white/5 p-8 rounded-[2rem]">
               <div className="flex flex-col md:flex-row gap-4">
@@ -186,7 +227,7 @@ export default function Step1Identity() {
                 : "bg-slate-800 text-slate-600 opacity-50 grayscale cursor-not-allowed"
             )}
           >
-            CONFIRM & INITIALIZE CAPTURE
+            INITIALIZE NEW OPERATION
             <ArrowRight size={24} />
           </button>
         </div>
