@@ -3,14 +3,19 @@ import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
+import sys
+
+# Test Database Configuration (Absolute Path for Stability)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Insert backend directory (parent of tests) into sys.path
+sys.path.insert(0, os.path.dirname(BASE_DIR))
+
 from app.main import app
 from app.db.database import Base, get_db
 from app.db.models import Survey
 import os
 import sqlalchemy
 
-# Test Database Configuration (Absolute Path for Stability)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "test_plimsoll.db")
 TEST_DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 

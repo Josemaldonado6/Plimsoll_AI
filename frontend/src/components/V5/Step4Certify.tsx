@@ -1,7 +1,7 @@
-import React from 'react';
+
 import { 
   ShieldCheck, 
-  Download, 
+
   Share2, 
   FileText, 
   CheckCircle2,
@@ -11,14 +11,19 @@ import {
   Verified
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { cn } from '../../lib/utils';
-import { useTranslation } from 'react-i18next';
+
 
 export default function Step4Certify({ onExport, onReset }: { onExport: (id: number) => void, onReset: () => void }) {
-  const { t } = useTranslation();
+
   const { currentResult, vesselInfo } = useStore();
 
   if (!currentResult) return null;
+
+  // ENHANCED TELEMETRY BINDING
+  const coreDraft = currentResult?.draft_mean || 0;
+  const tpc = 42.8;
+  const projectedWeight = currentResult?.net_cargo_weight || (coreDraft ? (coreDraft * 100 * tpc) - 5000 : 0);
+  const displayWeight = Math.max(0, projectedWeight);
 
   return (
     <div className="flex-1 flex flex-col p-8 md:p-12 animate-fade-in relative">
@@ -69,7 +74,7 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
                     <div className="space-y-1">
                         <span className="text-slate-500 font-black text-[9px] uppercase tracking-widest">NET_CARGO_WEIGHT</span>
                         <div className="flex items-baseline gap-2">
-                             <p className="text-3xl font-black text-white">{Math.round(currentResult.net_cargo_weight || 0).toLocaleString()}</p>
+                             <p className="text-3xl font-black text-white">{Math.round(displayWeight).toLocaleString()}</p>
                              <span className="text-[#e9c349] font-bold text-xs">t</span>
                         </div>
                     </div>

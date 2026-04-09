@@ -1,0 +1,51 @@
+﻿python : INFO:Plimsoll-V4
+-Vision:Plimsoll V4: 
+VisionTrinity (OpenVINO 
+INT8) inicializada.
+At line:1 char:1
++ python -m uvicorn 
+app.main:app --host 
+0.0.0.0 --port 8000 2>&1 
+| Out- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+    + CategoryInfo       
+       : NotSpecified:   
+  (INFO:Plimsoll-V...)   
+  inicializada.:Strin    
+g) [], RemoteExcepti    
+on
+    + FullyQualifiedErro 
+   rId : NativeCommandE  
+  rror
+ 
+INFO:app.api.endpoints:DA
+TA_DIR RESOLVED TO: C:\Us
+ers\joseu\OneDrive\Deskto
+p\Plimsoll_AI\backend\dat
+a
+WARNING:CloudStorage:Clou
+dStorageService: Missing 
+S3 credentials. Running 
+in Local-Only mode.
+INFO:     Started server 
+process [14112]
+INFO:     Waiting for 
+application startup.
+INFO:     Application 
+startup complete.
+ERROR:    [Errno 10048] 
+error while attempting 
+to bind on address 
+('0.0.0.0', 8000): only 
+one usage of each socket 
+address 
+(protocol/network 
+address/port) is 
+normally permitted
+INFO:     Waiting for 
+application shutdown.
+INFO:     Application 
+shutdown complete.
+[SYSTEM] Backend Reloaded - Version 1.0.1
