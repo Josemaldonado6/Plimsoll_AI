@@ -21,6 +21,10 @@ import LandingPage from './components/LandingPage'
 import { Login } from './components/Login';
 import { getApiUrl } from './store/useStore';
 
+// GLOBAL TUNNEL BYPASS: Ensures localtunnel/ngrok APIs return JSON instead of a warning HTML page
+axios.defaults.headers.common['Bypass-Tunnel-Reminder'] = 'true';
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
 export default function App() {
     const { t } = useTranslation();
     const {

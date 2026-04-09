@@ -122,7 +122,11 @@ export const useStore = create<PlimsollState>()(
                         const response = await fetch(getApiUrl('/api/sync/handshake'), {
                             method: 'POST',
                             mode: 'cors',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Bypass-Tunnel-Reminder': 'true',
+                                'ngrok-skip-browser-warning': 'true'
+                            },
                             body: JSON.stringify(survey)
                         });
 

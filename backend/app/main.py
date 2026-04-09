@@ -42,22 +42,13 @@ print("[SYSTEM] Backend Reloaded - Version 1.0.1")
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-class ProfessionalCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            response = Response()
-            response.status_code = 200
-        else:
-            response = await call_next(request)
-        
-        # [CRITICAL] Forced Header Injection for Tunnel Immunity
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS, DELETE, PUT"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        return response
-
-app.add_middleware(ProfessionalCORSMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replaced custom middleware due to Origin=* + Credentials=True conflict and missing error handler CORS injection
+    allow_credentials=False,  # Bearer token auth via headers doesn't require cookies/credentials=True
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(endpoints.router, prefix="/api")
