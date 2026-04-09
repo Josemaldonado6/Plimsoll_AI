@@ -16,6 +16,8 @@ class SyncPayload(BaseModel):
     draft_mean: float
     timestamp: str
     video_url: Optional[str] = None # Added when video upload completes
+    operation_id: Optional[str] = None
+    phase: Optional[str] = None
 
 @router.post("/sync/handshake")
 async def sync_handshake(payload: SyncPayload, background_tasks: BackgroundTasks):

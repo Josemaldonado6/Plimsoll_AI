@@ -146,15 +146,22 @@ export const useStore = create<PlimsollState>()(
 
 
             syncDrafts: async () => {
-                const { history, isOnline, edgeUrl } = useStore.getState();
+                const { operations, isOnline, edgeUrl } = useStore.getState();
                 if (!isOnline) return;
 
-                const unsynced = history.filter(s => !s.is_synced);
+                const unsynced: (ScanResult & { opId: string, vessel_name: string, imo: string })[] = [];
+                for (const op of operations) {
+                    for (const scan of op.scans) {
+                        if (!scan.is_synced) {
+                            unsynced.push({ ...scan, opId: op.id, vessel_name: op.vessel_name, imo: op.imo });
+                        }
+                    }
+                }
+
                 if (unsynced.length === 0) return;
 
-                console.log(`[SYNC] Initiating handshake for ${unsynced.length} reports...`);
+                console.log(`[SYNC] Initiating handshake for ${unsynced.length} scans...`);
 
-                // Utilizar la URL del Hub (Edge) para la sincronización, sin importar el entorno
                 const getApiUrl = (path: string) => {
                     const base = edgeUrl || "https://plimsoll-official-hub.loca.lt";
                     return `${base.replace(/\/$/, '')}${path}`;
@@ -162,6 +169,12 @@ export const useStore = create<PlimsollState>()(
 
                 for (const survey of unsynced) {
                     try {
+                        const payload = {
+                            ...survey,
+                            operation_id: survey.opId,
+                            vessel_name: survey.vessel_name,
+                            vessel_imo: survey.imo
+                        };
                         const response = await fetch(getApiUrl('/api/sync/handshake'), {
                             method: 'POST',
                             mode: 'cors',
@@ -170,19 +183,25 @@ export const useStore = create<PlimsollState>()(
                                 'Bypass-Tunnel-Reminder': 'true',
                                 'ngrok-skip-browser-warning': 'true'
                             },
-                            body: JSON.stringify(survey)
+                            body: JSON.stringify(payload)
                         });
 
                         if (response.ok) {
                             set((state) => ({
-                                history: state.history.map(s => s.id === survey.id ? { ...s, is_synced: 1 } : s)
+                                operations: state.operations.map(op => {
+                                    if (op.id !== survey.opId) return op;
+                                    return {
+                                        ...op,
+                                        scans: op.scans.map(s => s.id === survey.id ? { ...s, is_synced: 1 } : s)
+                                    };
+                                })
                             }));
-                            console.log(`[SYNC] Handshake complete for Survey ID ${survey.id}`);
+                            console.log(`[SYNC] Handshake complete for Scan ID ${survey.id}`);
                         } else {
-                            console.error(`[SYNC] Handshake failed for ID ${survey.id} with status: ${response.status}`);
+                            console.error(`[SYNC] Handshake failed for Scan ID ${survey.id} with status: ${response.status}`);
                         }
                     } catch (e) {
-                        console.error(`[SYNC] Handshake failed for ID ${survey.id}`, e);
+                        console.error(`[SYNC] Handshake failed for Scan ID ${survey.id}`, e);
                     }
                 }
             },

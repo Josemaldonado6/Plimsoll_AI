@@ -68,6 +68,12 @@ export default function App() {
         if (vesselInfo?.imo) {
             formData.append("imo", vesselInfo.imo);
         }
+        
+        const activeOp = useStore.getState().activeOperationId;
+        if (activeOp) {
+            formData.append("operation_id", activeOp);
+            formData.append("phase", phase);
+        }
 
         try {
             const response = await axios.post(getApiUrl("/api/analyze"), formData, {

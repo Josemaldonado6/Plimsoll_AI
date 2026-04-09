@@ -66,6 +66,8 @@ from app.db.models import Survey, Vessel
 async def analyze_draft(
     video: UploadFile = File(...), 
     imo: str = Form(None),
+    operation_id: str = Form(None),
+    phase: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     try:
@@ -95,6 +97,8 @@ async def analyze_draft(
 
         # 4. Guardar en Base de Datos con ADN del Barco
         db_survey = Survey(
+            operation_id=operation_id,
+            phase=phase,
             filename=file_name,
             draft_mean=result.get("draft_mean"),
             confidence=result.get("confidence"),

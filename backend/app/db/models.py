@@ -26,6 +26,8 @@ class Survey(Base):
     __tablename__ = "surveys"
 
     id = Column(Integer, primary_key=True, index=True)
+    operation_id = Column(String, index=True, nullable=True)
+    phase = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
     filename = Column(String)
     draft_mean = Column(Float)
