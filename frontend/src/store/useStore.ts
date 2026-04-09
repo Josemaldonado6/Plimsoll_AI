@@ -33,9 +33,9 @@ interface User {
 
 interface PlimsollState {
     showLanding: boolean
-    activeTab: string
+    activeTab: 'Identity' | 'Capture' | 'Analysis' | 'Certify'
     history: Survey[]
-    theme: 'light' | 'dark' | 'midnight'
+    theme: 'midnight' | 'daylight'
     isOnline: boolean
     currentResult: any | null
     isAnalyzing: boolean
@@ -50,13 +50,12 @@ interface PlimsollState {
         hydrostatics_data?: string
     }
 
-
     // Actions
     setShowLanding: (show: boolean) => void
-    setActiveTab: (tab: string) => void
+    setActiveTab: (tab: 'Identity' | 'Capture' | 'Analysis' | 'Certify') => void
     setHistory: (history: Survey[]) => void
     addSurvey: (survey: Survey) => void
-    setTheme: (theme: 'light' | 'dark' | 'midnight') => void
+    setTheme: (theme: 'midnight') => void
     setIsOnline: (status: boolean) => void
     setCurrentResult: (result: any | null) => void
     setIsAnalyzing: (status: boolean) => void
@@ -73,7 +72,7 @@ export const useStore = create<PlimsollState>()(
     persist(
         (set) => ({
             showLanding: true,
-            activeTab: "Radar Survey",
+            activeTab: "Identity",
             history: [],
             theme: 'midnight', // Defaulting to midnight for high-contrast field ops
             isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
@@ -142,7 +141,7 @@ export const useStore = create<PlimsollState>()(
             },
             resetState: () => set({
                 showLanding: true,
-                activeTab: "Radar Survey",
+                activeTab: "Identity",
                 history: [],
                 theme: 'midnight'
             })

@@ -1,55 +1,41 @@
 /*
  * -----------------------------------------------------------------------------
  * PROYECTO: PLIMSOLL AI - MARITIME AUDIT SYSTEM
- * ARCHIVO: App.tsx
- *
- * DERECHOS DE AUTOR / COPYRIGHT:
- * (c) 2026 José de Jesús Maldonado Ordaz. Todos los derechos reservados.
- *
- * PROPIEDAD INTELECTUAL:
- * Este código fuente, algoritmos, lógica de negocio y diseño de interfaz
- * son propiedad exclusiva de su autor. Queda prohibida su reproducción,
- * distribución o uso sin una licencia otorgada por escrito.
- *
- * REGISTRO:
- * Protegido bajo la Ley Federal del Derecho de Autor (México) y
- * Tratados Internacionales de la OMPI.
- *
- * CONFIDENCIALIDAD:
- * Este archivo contiene SECRETOS INDUSTRIALES. Su acceso no autorizado
- * constituye un delito federal.
+ * ARCHIVO: App.tsx (V5 EDITION)
  * -----------------------------------------------------------------------------
  */
-import { useState, useRef, useEffect } from 'react'
-import axios from 'axios'
+import { useEffect } from 'react'
+import { useStore } from './store/useStore';
+import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 
-import DronePilot from './components/DronePilot'
+// V5 COMPONENTS
+import LayoutV5 from './components/LayoutV5';
+import Step1Identity from './components/V5/Step1Identity';
+import Step2Capture from './components/V5/Step2Capture';
+import Step3Analysis from './components/V5/Step3Analysis';
+import Step4Certify from './components/V5/Step4Certify';
+
+// CORE COMPONENTS
 import LandingPage from './components/LandingPage'
-import DraftDashboard from './components/DraftDashboard';
-import { useStore, getApiUrl } from './store/useStore';
 import { Login } from './components/Login';
-import SystemConfig from './components/SystemConfig';
-import HistoryLog from './components/HistoryLog';
-import Layout from './components/Layout';
+import { getApiUrl } from './store/useStore';
 
 export default function App() {
+    const { t } = useTranslation();
     const {
         showLanding, setShowLanding,
-        activeTab,
-        theme,
+        activeTab, setActiveTab,
         isOnline, setIsOnline,
         currentResult, setCurrentResult,
         isAnalyzing, setIsAnalyzing,
         user, token,
         syncDrafts,
-        vesselInfo
+        vesselInfo,
+        resetState
     } = useStore();
 
-    const [file, setFile] = useState<File | null>(null)
-    const [analysisStatus, setAnalysisStatus] = useState<string>('')
-    const inputRef = useRef<HTMLInputElement>(null)
-
-
+    // HANDSHAKE & SYNC LOGIC
     useEffect(() => {
         const handleOnline = () => {
             setIsOnline(true);
@@ -66,103 +52,59 @@ export default function App() {
         };
     }, [setIsOnline, syncDrafts]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault()
-        if (e.target.files && e.target.files[0]) {
-            const selectedFile = e.target.files[0];
-            setFile(selectedFile);
-            handleAnalyze(selectedFile); // Trigger auto-analysis
-        }
-    }
-
-    const handleAnalyze = async (fileToAnalyze?: File) => {
-        const fileToUse = fileToAnalyze || file;
-        if (!fileToUse || !token) return;
+    // MISSION CORE: ANALYSIS ENGINE
+    const handleAnalyze = async (file: File) => {
+        if (!file || !token) return;
 
         setIsAnalyzing(true);
-        setAnalysisStatus("Initializing Neural Pipeline...");
-        setCurrentResult(null); // Clear previous results
+        setCurrentResult(null); 
+        
         const formData = new FormData();
-        formData.append("video", fileToUse);
+        formData.append("video", file);
         if (vesselInfo?.imo) {
             formData.append("imo", vesselInfo.imo);
         }
 
         try {
-            setAnalysisStatus("Neural Networks Warming Up...");
-            // Simultaneous wait for upload and small delay for UI effect
             const response = await axios.post(getApiUrl("/api/analyze"), formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                     Authorization: `Bearer ${token}`
-                },
-                onUploadProgress: (progressEvent) => {
-                    const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-                    if (percentCompleted < 100) {
-                        setAnalysisStatus(`Uploading Video Payload: ${percentCompleted}%`);
-                    } else {
-                        setAnalysisStatus("Cortex Engine: Processing Frames...");
-                    }
                 }
             })
 
-            setAnalysisStatus("Running YOLOv8 + SAM Segmentation...");
-            await new Promise(r => setTimeout(r, 800)); // Visual feedback for user
+            // SIMULATING PHYSICS CONVERGENCE (Visual Effect for Step 3)
+            setTimeout(() => {
+                const finalResult = { ...response.data };
+                setCurrentResult(finalResult);
+                
+                // Persist to local history
+                useStore.getState().addSurvey({
+                    id: Date.now(),
+                    filename: file.name,
+                    draft_mean: finalResult.draft_mean,
+                    confidence: finalResult.confidence,
+                    sea_state: finalResult.sea_state,
+                    timestamp: new Date().toISOString(),
+                    is_synced: isOnline ? 1 : 0
+                });
 
-            setAnalysisStatus("Detecting Waterline & Draft Marks...");
-            const vesselResponse = await axios.get(getApiUrl(`/api/ship/9406087`), {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            setAnalysisStatus("Physics Engine: Calculating Displacement...");
-            const finalResult = {
-                ...response.data,
-                ...vesselResponse.data,
-                vessel_name: vesselResponse.data.name,
-                vessel_imo: vesselResponse.data.imo || "9406087",
-                vessel_flag: vesselResponse.data.flag,
-                vessel_type: vesselResponse.data.type,
-                vessel_loa: vesselResponse.data.loa,
-                vessel_beam: vesselResponse.data.beam,
-                logistics: vesselResponse.data.logistics,
-                risk_score: vesselResponse.data.risk_score
-            };
-
-            setCurrentResult(finalResult);
-
-            // Add to persistent history
-            useStore.getState().addSurvey({
-                id: Date.now(),
-                filename: fileToUse.name,
-                draft_mean: finalResult.draft_mean,
-                confidence: finalResult.confidence,
-                sea_state: finalResult.sea_state,
-                timestamp: new Date().toISOString(),
-                is_synced: isOnline ? 0 : 0 // Mark for sync
-            });
-
-            if (isOnline) syncDrafts(); // Trigger immediate sync if online
-            setAnalysisStatus("Analysis Complete.");
+                if (isOnline) syncDrafts();
+                setActiveTab('Analysis'); // Move to Step 3 automatically after processing
+            }, 2000);
 
         } catch (error: any) {
-            console.error("Analysis failed", error)
-            const errorMsg = error.response?.status === 422
-                ? `Analysis Rejected: ${error.response.data.detail || "Invalid video quality or no frames found."}`
-                : "Analysis failed. Ensure backend is running.";
-            alert(errorMsg);
+            console.error("Analysis failed", error);
+            alert("Analysis failed. Ensure Cortex Hub is online.");
         } finally {
             setIsAnalyzing(false);
-            setAnalysisStatus("");
         }
     }
 
-
-
+    // MISSION CORE: EXPORT ENGINE
     const handleDownload = async (id: number) => {
         if (!token) return;
         try {
-            // Temporarily default to 'en' until i18n is exposed to store or passed differently,
-            // or we could skip language passing since the backend uses translation fallback.
             const response = await axios.get(getApiUrl(`/api/surveys/${id}/pdf?lang=en`), {
                 responseType: 'blob',
                 headers: {
@@ -171,31 +113,24 @@ export default function App() {
                 }
             })
 
-            if (response.data.type !== 'application/pdf') {
-                console.error("Wrong content type:", response.data.type);
-                alert("The server returned an invalid file format. Please try again.");
-                return;
-            }
-
             const url = window.URL.createObjectURL(response.data)
             const link = document.createElement('a')
             link.href = url
-            link.setAttribute('download', `PLIMSOLL_Report_ID${id}.pdf`)
+            link.setAttribute('download', `PLIMSOLL_CERT_ID${id}.pdf`)
             document.body.appendChild(link)
             link.click()
-
+            
             setTimeout(() => {
                 document.body.removeChild(link)
                 window.URL.revokeObjectURL(url)
             }, 100)
         } catch (error) {
             console.error("Download failed", error)
-            alert("Failed to download report. The analysis might still be processing.")
+            alert("Certification export failed. Retrying logic...")
         }
     }
 
-
-
+    // FLOW CONTROL
     if (showLanding) {
         return <LandingPage onEnterApp={() => setShowLanding(false)} />
     }
@@ -205,55 +140,20 @@ export default function App() {
     }
 
     return (
-        <Layout>
-            {activeTab === "Radar Survey" && (
-                <div className="flex-1">
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        className="hidden"
-                        accept="video/*"
-                        onChange={handleChange}
-                    />
-                    <DraftDashboard
-                        data={currentResult}
-                        onConfirm={() => console.log("Confirmed")}
-                        onUpload={() => inputRef.current?.click()}
-                        onExport={handleDownload}
-                        onEnrich={(enrichedData) => {
-                            setCurrentResult({
-                                ...currentResult,
-                                ...enrichedData,
-                                vessel_name: enrichedData.name,
-                                vessel_imo: enrichedData.imo,
-                                vessel_flag: enrichedData.flag,
-                                vessel_type: enrichedData.type,
-                                vessel_loa: enrichedData.loa,
-                                vessel_beam: enrichedData.beam,
-                                logistics: enrichedData.logistics,
-                                risk_score: enrichedData.risk_score
-                            });
-                        }}
-                        theme={theme}
-                        isAnalyzing={isAnalyzing}
-                        analysisStatus={analysisStatus}
-                    />
-                </div>
+        <LayoutV5>
+            {activeTab === 'Identity' && <Step1Identity />}
+            
+            {activeTab === 'Capture' && (
+                <Step2Capture onAnalyze={handleAnalyze} />
             )}
-
-            {activeTab === "Drone Pilot" && (
-                <div className="w-full h-full">
-                    <DronePilot theme={theme} />
-                </div>
+            
+            {activeTab === 'Analysis' && (
+                <Step3Analysis onNext={() => setActiveTab('Certify')} />
             )}
-
-            {activeTab === "History Log" && (
-                <HistoryLog />
+            
+            {activeTab === 'Certify' && (
+                <Step4Certify onExport={handleDownload} onReset={resetState} />
             )}
-
-            {activeTab === "System Config" && (
-                <SystemConfig />
-            )}
-        </Layout>
+        </LayoutV5>
     )
 }
