@@ -38,8 +38,14 @@ class PlimsollOverseer(ctk.CTk):
             "audit": None
         }
 
-        # Subprocess working directories
-        self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        # Robust Path Management (Sovereign EXE Mode)
+        if getattr(sys, 'frozen', False):
+            # In EXE mode, we point to the absolute project root on this specific system
+            self.ROOT_DIR = r"c:\Users\joseu\OneDrive\Desktop\Plimsoll_AI"
+        else:
+            # In script mode, we use the local path
+            self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+            
         self.BACKEND_DIR = os.path.join(self.ROOT_DIR, "backend")
         self.FRONTEND_DIR = os.path.join(self.ROOT_DIR, "frontend")
 
@@ -131,13 +137,28 @@ class PlimsollOverseer(ctk.CTk):
         else:
             btn.configure(fg_color="transparent", text_color=COLOR_TEXT, text=f"START {name.upper()}")
 
+    def toggle_process(self, name):
+        # Prevent rapid double-clicks from toggling twice
+        current_time = time.time()
+        if hasattr(self, '_last_click') and (current_time - self._last_click < 0.8):
+            return
+        self._last_click = current_time
+
+        if self.processes[name]:
+            self.stop_process(name)
+        else:
+            self.start_process(name)
+
     def stream_output(self, process, name, color):
         for line in iter(process.stdout.readline, b''):
             decoded = line.decode('utf-8', errors='replace').strip()
             if decoded:
                 self.log(f"[{name.upper()}] {decoded}", color)
         # End of stream
-        if self.processes[name] == process:
+        process.stdout.close()
+        process.wait()
+        
+        if self.processes.get(name) == process:
             self.processes[name] = None
             self.update_btn_state(name, False)
             self.log(f"{name.upper()} Process Exited.", COLOR_DANGER)
@@ -164,9 +185,12 @@ class PlimsollOverseer(ctk.CTk):
             cwd = self.ROOT_DIR
             color = COLOR_ACCENT
 
+        # Windows-specific process flags for better control
+        creationflags = 0
         if os.name == 'nt':
-            # Use shell=True for npm/npx resolving on Windows
-            use_shell = (name in ["frontend", "tunnel", "audit"])
+            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+            # Always use shell=True on Windows to resolve aliases/scripts correctly
+            use_shell = True
         else:
             use_shell = False
 
@@ -178,7 +202,8 @@ class PlimsollOverseer(ctk.CTk):
                 cwd=cwd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                shell=use_shell
+                shell=use_shell,
+                creationflags=creationflags
             )
             self.processes[name] = proc
             if name != "audit":

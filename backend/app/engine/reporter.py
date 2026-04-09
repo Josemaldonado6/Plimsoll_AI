@@ -28,6 +28,7 @@ import time
 from datetime import datetime
 from PIL import Image
 from app.engine.notary import BlockchainNotary
+import json
 
 class PDFGenerator:
     def __init__(self, output_dir="/data"):
@@ -387,7 +388,6 @@ class PDFGenerator:
             blockchain_record = notary.notarize_survey(survey_data)
             
             if not blockchain_record:
-                import time, hashlib, json
                 blockchain_record = {
                     'node_validator': 'LOCAL_FAILSAFE_NODE_0X9',
                     'block_number': 'OFFLINE_PENDING_SYNC',
