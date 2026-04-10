@@ -15,6 +15,9 @@ import {
 import { useStore } from '../store/useStore';
 import { cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
+import VaultV5 from './V5/VaultV5';
+import SettingsV5 from './V5/SettingsV5';
 
 export default function LayoutV5({ children }: { children: React.ReactNode }) {
   const { 
@@ -22,9 +25,18 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
     setActiveTab, 
     user, 
     isOnline,
-    vesselInfo 
+    vesselInfo,
+    addAuditLog
   } = useStore();
   const { t, i18n } = useTranslation();
+  
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // LOG NAVIGATION
+  useEffect(() => {
+    addAuditLog('NAVIGATE', `System view switched to ${activeTab}`);
+  }, [activeTab, addAuditLog]);
 
   const handleLangToggle = () => {
     const langs = ['en', 'es', 'pt', 'zh'];
@@ -80,16 +92,16 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
           </button>
           <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
           <button 
-             onClick={() => alert(t('v5.preferences_locked', 'Preferences locked by Administrator.'))}
+             onClick={() => setSettingsOpen(true)}
              title={t('v5.system_components', 'Operator Preferences')} 
-             className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded"
+             className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded transition-all active:scale-90"
           >
             <SlidersHorizontal size={20} />
           </button>
           <button 
-             onClick={() => alert(t('v5.vault_restricted', 'Audit Vault access restricted. Pending DNV clearance.'))}
+             onClick={() => setVaultOpen(true)}
              title={t('v5.terminal_logic', 'Audit Vault (History)')} 
-             className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded"
+             className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded transition-all active:scale-90"
           >
             <Archive size={20} />
           </button>
@@ -180,6 +192,11 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
 
       {/* OVERRAYS DECORATIVOS HUD */}
       <div className="fixed inset-0 pointer-events-none hud-scanline opacity-30"></div>
+      
+      {/* SYSTEM OVERLAYS */}
+      {vaultOpen && <VaultV5 onClose={() => setVaultOpen(false)} />}
+      {settingsOpen && <SettingsV5 onClose={() => setSettingsOpen(false)} />}
+      
       <div className="fixed top-20 right-8 pointer-events-none opacity-20">
         <div className="font-mono text-[8px] text-[#e9c349] leading-none space-y-1 bg-black/40 p-2 border-r border-[#e9c349]/40 backdrop-blur-sm">
           <div className="animate-pulse flex gap-2"><span>{t('v5.recv_buf', 'RECV_BUF: 0x442A')}</span></div>

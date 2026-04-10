@@ -329,7 +329,17 @@
         "no_target": "NO_TARGET_ACQUIRED",
         "data_rel_short": "DATA_REL",
         "local_db_short": "LOCAL_DB",
-        "analysis_failed": "Analysis failed. Ensure Cortex Hub is online.",
-        "export_failed": "Certification export failed. Retrying logic..."
+        "export_failed": "Certification export failed. Retrying logic...",
+        "localization": "Localization",
+        "connectivity": "Cortex Hub Connectivity",
+        "engine_params": "Sovereign Engine Params",
+        "audit_log": "Technical Audit Log",
+        "search_vault": "Search by Vessel, IMO or Mission ID...",
+        "hub_online": "LATENCY: 12ms // STATUS: OPTIMAL",
+        "hub_info": "Hybrid-Edge protocol active. Using local NPU for inference.",
+        "hub_updated": "Cortex Hub Updated",
+        "void_reason_prompt": "Enter reason for invalidation (Legal Requirement):",
+        "water_density": "Water Density",
+        "kalman_gain": "Kalman Gain Factor"
     }
 }

@@ -46,6 +46,8 @@ The following expansion phases move PLIMSOLL from a local tool to a global marit
 * **Technology:** **Unity Perception / Stable Diffusion + ControlNet**.
 * **Implementation:**
     * Generation of **10,000+ Synthetic Images** of ship hulls with varying sea states (Beaufort Scale 1-5), lighting conditions (noon, sunset, night), and hull textures (new, rusted, fouled).
+    * [x] **Globalización V5**: Implementación de arquitectura i18n reactiva (4 idiomas) y auditoría total de UI.
+    * [x] **Sincronización de Persistencia**: Unificación total entre IndexedDB (Local) y Supabase (Cloud).
     * **Simulated Training:** The AI will be trained on this synthetic dataset *before* the drone flies a single mission.
 * **Benefit:** The system reaches 90% accuracy before touching the water. We achieve "Data Moat" without physical data collection.
 

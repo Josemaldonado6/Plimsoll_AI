@@ -324,7 +324,17 @@
         "no_target": "未获取目标",
         "data_rel_short": "数据关系",
         "local_db_short": "本地数据库",
-        "analysis_failed": "分析失败。请确保 Cortex Hub 在线。",
-        "export_failed": "证书导出失败。正在重试..."
+        "export_failed": "证书导出失败。正在重试...",
+        "localization": "本地化",
+        "connectivity": "Cortex Hub 连接",
+        "engine_params": "主权引擎参数",
+        "audit_log": "技术审计日志",
+        "search_vault": "通过船名、IMO 或任务 ID 搜索...",
+        "hub_online": "延迟: 12ms // 状态: 最佳",
+        "hub_info": "Hybrid-Edge 协议激活。使用本地 NPU 进行推理。",
+        "hub_updated": "Cortex Hub 已更新",
+        "void_reason_prompt": "输入作废原因（法定要求）：",
+        "water_density": "海水密度",
+        "kalman_gain": "卡尔曼增益因子"
     }
 }

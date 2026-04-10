@@ -78,8 +78,18 @@ const additions = {
         'no_target': 'NO_TARGET_ACQUIRED',
         'data_rel_short': 'DATA_REL',
         'local_db_short': 'LOCAL_DB',
-        'analysis_failed': 'Analysis failed. Ensure Cortex Hub is online.',
-        'export_failed': 'Certification export failed. Retrying logic...'
+        'export_failed': 'Certification export failed. Retrying logic...',
+        'localization': 'Localization',
+        'connectivity': 'Cortex Hub Connectivity',
+        'engine_params': 'Sovereign Engine Params',
+        'audit_log': 'Technical Audit Log',
+        'search_vault': 'Search by Vessel, IMO or Mission ID...',
+        'hub_online': 'LATENCY: 12ms // STATUS: OPTIMAL',
+        'hub_info': 'Hybrid-Edge protocol active. Using local NPU for inference.',
+        'hub_updated': 'Cortex Hub Updated',
+        'void_reason_prompt': 'Enter reason for invalidation (Legal Requirement):',
+        'water_density': 'Water Density',
+        'kalman_gain': 'Kalman Gain Factor'
     },
     'es': {
         'ops_hub': 'Centro Ops',
@@ -155,8 +165,18 @@ const additions = {
         'no_target': 'SIN_OBJETIVO_ADQUIRIDO',
         'data_rel_short': 'DATA_REL',
         'local_db_short': 'DB_LOCAL',
-        'analysis_failed': 'Fallo en el análisis. Asegúrese de que el Núcleo Cortex esté en línea.',
-        'export_failed': 'Fallo en la exportación del certificado. Reintentando...'
+        'export_failed': 'Fallo en la exportación del certificado. Reintentando...',
+        'localization': 'Localización',
+        'connectivity': 'Conectividad Cortex Hub',
+        'engine_params': 'Parámetros del Motor Sovereign',
+        'audit_log': 'Registro de Auditoría Técnica',
+        'search_vault': 'Buscar por Buque, IMO o ID de Misión...',
+        'hub_online': 'LATENCIA: 12ms // ESTADO: ÓPTIMO',
+        'hub_info': 'Protocolo Hybrid-Edge activo. Usando NPU local para inferencia.',
+        'hub_updated': 'Cortex Hub Actualizado',
+        'void_reason_prompt': 'Ingrese el motivo de la invalidación (Requerimiento Legal):',
+        'water_density': 'Densidad del Agua',
+        'kalman_gain': 'Factor de Ganancia Kalman'
     },
     'pt': {
         'ops_hub': 'Centro Ops',
@@ -232,8 +252,18 @@ const additions = {
         'no_target': 'SEM_TARGET_ADQUIRIDO',
         'data_rel_short': 'DATA_REL',
         'local_db_short': 'DB_LOCAL',
-        'analysis_failed': 'Falha na análise. Verifique se o Cortex Hub está online.',
-        'export_failed': 'Falha na exportação da certificação. Reentando...'
+        'export_failed': 'Falha na exportação da certificação. Reentando...',
+        'localization': 'Localização',
+        'connectivity': 'Conectividade Cortex Hub',
+        'engine_params': 'Parâmetros do Motor Sovereign',
+        'audit_log': 'Log de Auditoria Técnica',
+        'search_vault': 'Pesquisar por Navio, IMO ou ID da Missão...',
+        'hub_online': 'LATÊNCIA: 12ms // STATUS: OPTIMAL',
+        'hub_info': 'Protocolo Hybrid-Edge ativo. Usando NPU local para inferência.',
+        'hub_updated': 'Cortex Hub Atualizado',
+        'void_reason_prompt': 'Insira o motivo da invalidação (Requisito Legal):',
+        'water_density': 'Densidade da Água',
+        'kalman_gain': 'Fator de Ganho de Kalman'
     },
     'zh': {
         'ops_hub': '运营中心',
@@ -309,8 +339,18 @@ const additions = {
         'no_target': '未获取目标',
         'data_rel_short': '数据关系',
         'local_db_short': '本地数据库',
-        'analysis_failed': '分析失败。请确保 Cortex Hub 在线。',
-        'export_failed': '证书导出失败。正在重试...'
+        'export_failed': '证书导出失败。正在重试...',
+        'localization': '本地化',
+        'connectivity': 'Cortex Hub 连接',
+        'engine_params': '主权引擎参数',
+        'audit_log': '技术审计日志',
+        'search_vault': '通过船名、IMO 或任务 ID 搜索...',
+        'hub_online': '延迟: 12ms // 状态: 最佳',
+        'hub_info': 'Hybrid-Edge 协议激活。使用本地 NPU 进行推理。',
+        'hub_updated': 'Cortex Hub 已更新',
+        'void_reason_prompt': '输入作废原因（法定要求）：',
+        'water_density': '海水密度',
+        'kalman_gain': '卡尔曼增益因子'
     }
 };
 

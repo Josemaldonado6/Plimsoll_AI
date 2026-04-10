@@ -410,7 +410,17 @@
         "no_target": "SIN_OBJETIVO_ADQUIRIDO",
         "data_rel_short": "DATA_REL",
         "local_db_short": "DB_LOCAL",
-        "analysis_failed": "Fallo en el análisis. Asegúrese de que el Núcleo Cortex esté en línea.",
-        "export_failed": "Fallo en la exportación del certificado. Reintentando..."
+        "export_failed": "Fallo en la exportación del certificado. Reintentando...",
+        "localization": "Localización",
+        "connectivity": "Conectividad Cortex Hub",
+        "engine_params": "Parámetros del Motor Sovereign",
+        "audit_log": "Registro de Auditoría Técnica",
+        "search_vault": "Buscar por Buque, IMO o ID de Misión...",
+        "hub_online": "LATENCIA: 12ms // ESTADO: ÓPTIMO",
+        "hub_info": "Protocolo Hybrid-Edge activo. Usando NPU local para inferencia.",
+        "hub_updated": "Cortex Hub Actualizado",
+        "void_reason_prompt": "Ingrese el motivo de la invalidación (Requerimiento Legal):",
+        "water_density": "Densidad del Agua",
+        "kalman_gain": "Factor de Ganancia Kalman"
     }
 }

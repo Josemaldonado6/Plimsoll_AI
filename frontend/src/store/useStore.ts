@@ -33,8 +33,18 @@ export interface Operation {
     vessel_name: string;
     imo: string;
     status: 'ACTIVE' | 'COMPLETED';
+    isVoided?: boolean;
+    voidedReason?: string;
     created_at: string;
     scans: ScanResult[];
+}
+
+export interface AuditLog {
+    id: string;
+    timestamp: string;
+    action: string;
+    details: string;
+    user: string;
 }
 
 interface User {
@@ -63,6 +73,7 @@ interface PlimsollState {
         beam?: number
         hydrostatics_data?: string
     }
+    auditLogs: AuditLog[];
 
     // Actions
     setShowLanding: (show: boolean) => void
@@ -81,6 +92,8 @@ interface PlimsollState {
     setVesselInfo: (info: any) => void
     syncDrafts: () => Promise<void>
     resetState: () => void
+    voidOperation: (opId: string, reason: string) => void
+    addAuditLog: (action: string, details: string) => void
 
 }
 
@@ -100,6 +113,7 @@ export const useStore = create<PlimsollState>()(
             token: null,
             edgeUrl: "https://plimsoll-official-hub.loca.lt",
             vesselInfo: { name: 'MV PACIFIC LEGACY', imo: '9823471' },
+            auditLogs: [],
 
 
             setShowLanding: (show) => set({ showLanding: show }),
@@ -210,8 +224,29 @@ export const useStore = create<PlimsollState>()(
                 activeTab: "Identity",
                 history: [],
                 activeOperationId: null,
-                theme: 'midnight'
-            })
+                theme: 'midnight',
+                auditLogs: []
+            }),
+            
+            voidOperation: (opId, reason) => {
+                const { addAuditLog } = useStore.getState();
+                set((state) => ({
+                    operations: state.operations.map(op => 
+                        op.id === opId ? { ...op, isVoided: true, voidedReason: reason } : op
+                    )
+                }));
+                addAuditLog('VOID_OPERATION', `Operation ${opId} invalidated. Reason: ${reason}`);
+            },
+
+            addAuditLog: (action, details) => set((state) => ({
+                auditLogs: [{
+                    id: `LOG_${Date.now()}`,
+                    timestamp: new Date().toISOString(),
+                    action,
+                    details,
+                    user: state.user?.full_name || 'SYSTEM'
+                }, ...state.auditLogs.slice(0, 99)] // Keep last 100 logs
+            }))
         }),
         {
             name: 'plimsoll-storage', // unique name
