@@ -133,11 +133,15 @@ The following expansion phases move PLIMSOLL from a local tool to a global marit
 
 # 4. THE GLOBAL EXPANSION: LINGUISTIC DOMINATION
 
-*   **PHASE 1 (FOUNDATION):** Full EN/ES Industrial Suite.
-*   **PHASE 2 (RESOURCES):** Portuguese (Brazil Iron Ore) & Mandarin (China Logistics).
-*   **PHASE 3 (ENERGY):** Arabic (Middle East Oil) with RTL interface optimization.
+*   **[x] PHASE 1 (FOUNDATION):** Full EN/ES Industrial Suite deployed over V5 architecture.
+*   **[x] PHASE 2 (RESOURCES):** Portuguese (Brazil Iron Ore) & Mandarin (China Logistics) dynamically integrated via i18n edge-switching.
+*   **[ ] PHASE 3 (ENERGY):** Arabic (Middle East Oil) with RTL interface optimization.
 
 ---
+
+# 4.5. ENTERPRISE DATA IMMUTABILITY (V5)
+*   **[x] The Sovereign Bridge:** Bi-directional sync bridging absolute State (Zustand IndexedDB) directly to Postgres (Supabase) protecting `operation_id` and `phase` relations.
+*   **[x] Differential Truth Engine:** Dynamic calculations of True Net Cargo (Final vs Initial) baked directly into the immutable S3 PDF exports.
 
 # 5. LOGISTICAL ABSOLUTISM (KPIs)
 

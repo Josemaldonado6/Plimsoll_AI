@@ -34,10 +34,10 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
   };
 
   const missionTabs: { id: 'Identity' | 'Capture' | 'Analysis' | 'Certify', icon: any, label: string }[] = [
-    { id: 'Identity', icon: Fingerprint, label: 'Ops Hub' },
-    { id: 'Capture', icon: Radar, label: 'Scan' },
-    { id: 'Analysis', icon: Activity, label: 'Matrix' },
-    { id: 'Certify', icon: Verified, label: 'Manifest' },
+    { id: 'Identity', icon: Fingerprint, label: t('v5.ops_hub', 'Ops Hub') },
+    { id: 'Capture', icon: Radar, label: t('v5.scan', 'Scan') },
+    { id: 'Analysis', icon: Activity, label: t('v5.matrix', 'Matrix') },
+    { id: 'Certify', icon: Verified, label: t('v5.manifest', 'Manifest') },
   ];
 
   const handleEasterEgg = (e: React.MouseEvent) => {
@@ -55,14 +55,14 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-8">
           <h1 
             onClick={handleEasterEgg}
-            className="text-2xl font-black text-[#e9c349] tracking-tighter font-headline flex items-center gap-2 cursor-pointer select-none"
+            className="text-2xl font-black text-[#e9c349] tracking-tighter font-headline flex items-center gap-2 cursor-pointer select-none group"
           >
-            PLIMSOLL SYSTEM <span className="text-[10px] bg-[#e9c349]/20 px-1.5 py-0.5 rounded tracking-widest text-[#e9c349]">V5</span>
+            {t('v5.mission_title', 'PLIMSOLL SYSTEM')} <span className="text-[10px] bg-[#e9c349]/20 px-1.5 py-0.5 rounded tracking-widest text-[#e9c349] group-hover:bg-[#e9c349] group-hover:text-[#0a0e1a] transition-all">V5</span>
           </h1>
           <nav className="hidden md:flex items-center gap-6">
             <div className="flex items-center gap-2 text-slate-500 font-headline text-[10px] uppercase tracking-[0.1rem]">
               <ShieldCheck size={12} className="text-[#00e639]" />
-              DNV_CERTIFIED
+              {t('v5.dnv_certified', 'DNV_CERTIFIED')}
             </div>
             <div className="text-[#e9c349]/60 font-headline text-[10px] uppercase tracking-[0.1rem] border-l border-white/10 pl-6">
               MISSION_{new Date().getUTCHours()}:{new Date().getUTCMinutes()}_UTC
@@ -80,22 +80,22 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
           </button>
           <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
           <button 
-             onClick={() => alert(t('system.preferences_locked', 'Preferences locked by Administrator.'))}
-             title="Operator Preferences" 
+             onClick={() => alert(t('v5.preferences_locked', 'Preferences locked by Administrator.'))}
+             title={t('v5.system_components', 'Operator Preferences')} 
              className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded"
           >
             <SlidersHorizontal size={20} />
           </button>
           <button 
-             onClick={() => alert(t('system.vault_restricted', 'Audit Vault access restricted. Pending DNV clearance.'))}
-             title="Audit Vault (History)" 
+             onClick={() => alert(t('v5.vault_restricted', 'Audit Vault access restricted. Pending DNV clearance.'))}
+             title={t('v5.terminal_logic', 'Audit Vault (History)')} 
              className="p-2 text-slate-500 hover:bg-[#e9c349]/10 hover:text-[#e9c349] transition-all rounded"
           >
             <Archive size={20} />
           </button>
           <div className="h-8 w-[1px] bg-white/10 mx-2"></div>
           <button 
-            title="End Shift / Secure Logout"
+            title={t('v5.end_shift', 'End Shift / Secure Logout')}
             onClick={() => useStore.getState().logout()}
             className="flex items-center gap-3 text-slate-500 hover:text-red-500 transition-colors group"
           >
@@ -104,7 +104,7 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
                 {user?.full_name?.split(' ')[0]}_01
               </div>
               <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">
-                END SHIFT
+                {t('v5.end_shift', 'END SHIFT')}
               </div>
             </div>
             <LogOut size={24} className="border border-white/5 p-1 rounded-full group-hover:border-red-500/50" />
@@ -130,13 +130,18 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex flex-col items-center justify-center px-10 py-2 transition-all relative min-w-[120px]",
+                  "flex flex-col items-center justify-center px-10 py-2 transition-all relative min-w-[120px] group",
                   isActive 
-                    ? "bg-[#e9c349] text-[#0a0e1a] shadow-[0_0_20px_rgba(233,195,73,0.3)]" 
+                    ? "bg-[#e9c349] text-[#0a0e1a] shadow-[0_0_25px_rgba(233,195,73,0.4)]" 
                     : "text-slate-500 hover:bg-[#e9c349]/5 hover:text-[#e9c349]"
                 )}
               >
-                <Icon size={24} className={cn(isActive && "fill-[#0a0e1a]")} />
+                <div className={cn(
+                  "transition-all duration-300",
+                  !isActive && "group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_#e9c349]"
+                )}>
+                  <Icon size={24} className={cn(isActive && "fill-[#0a0e1a]")} />
+                </div>
                 <span className="font-headline font-bold text-[10px] uppercase mt-1 tracking-widest">
                   {tab.label}
                 </span>
@@ -151,23 +156,23 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
         {/* TELEMETRY READOUT (RIGHT SIDE) */}
         <div className="hidden lg:flex border-l border-white/5 px-8 items-center gap-8 bg-[#0a0e1a]">
           <div className="flex gap-6">
-            <div className="flex flex-col items-center opacity-40">
+            <div className="flex flex-col items-center opacity-40 hover:opacity-100 transition-opacity cursor-help">
               <Cpu size={14} />
-              <span className="text-[8px] font-bold mt-1 tracking-widest">DATA_REL</span>
+              <span className="text-[8px] font-bold mt-1 tracking-widest">{t('v5.data_rel_short', 'DATA_REL')}</span>
             </div>
-            <div className="flex flex-col items-center opacity-40">
+            <div className="flex flex-col items-center opacity-40 hover:opacity-100 transition-opacity cursor-help">
               <Database size={14} />
-              <span className="text-[8px] font-bold mt-1 tracking-widest">LOCAL_DB</span>
+              <span className="text-[8px] font-bold mt-1 tracking-widest">{t('v5.local_db_short', 'LOCAL_DB')}</span>
             </div>
           </div>
           <div className="h-10 w-[1px] bg-white/5"></div>
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-2">
               <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isOnline ? "bg-[#00e639] shadow-[0_0_10px_#00e639]" : "bg-red-500")} />
-              <span className="text-[#e9c349] font-black text-[10px] tracking-widest">PULSE: STABLE</span>
+              <span className="text-[#e9c349] font-black text-[10px] tracking-widest">{t('v5.pulse_stable', 'PULSE: STABLE')}</span>
             </div>
             <div className="text-[8px] text-slate-500 uppercase font-bold mt-0.5 truncate max-w-[150px]">
-              {vesselInfo?.name || 'NO_TARGET_ACQUIRED'}
+              {vesselInfo?.name || t('v5.no_target', 'NO_TARGET_ACQUIRED')}
             </div>
           </div>
         </div>
@@ -176,11 +181,11 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
       {/* OVERRAYS DECORATIVOS HUD */}
       <div className="fixed inset-0 pointer-events-none hud-scanline opacity-30"></div>
       <div className="fixed top-20 right-8 pointer-events-none opacity-20">
-        <div className="font-mono text-[8px] text-[#e9c349] leading-none space-y-1 bg-black/40 p-2 border-r border-[#e9c349]/40">
-          <div>RECV_BUF: 0x442A</div>
-          <div>STATUS: LOCKED</div>
-          <div>AUTH: DNV_GL_SECURE</div>
-          <div>PHASE: PRE_SURVEY_01</div>
+        <div className="font-mono text-[8px] text-[#e9c349] leading-none space-y-1 bg-black/40 p-2 border-r border-[#e9c349]/40 backdrop-blur-sm">
+          <div className="animate-pulse flex gap-2"><span>{t('v5.recv_buf', 'RECV_BUF: 0x442A')}</span></div>
+          <div className="flex gap-2 text-white/50"><span>{t('v5.status_locked', 'STATUS: LOCKED')}</span></div>
+          <div className="flex gap-2"><span>{t('v5.auth_dnv', 'AUTH: DNV_GL_SECURE')}</span></div>
+          <div className="flex gap-2 text-[#00e639]"><span>{t('v5.phase_pre_survey', 'PHASE: PRE_SURVEY_01')}</span></div>
         </div>
       </div>
     </div>

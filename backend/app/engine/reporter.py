@@ -125,7 +125,32 @@ class PDFGenerator:
             "verified_shield": {
                 "en": "✓ VERIFIED BY PLIMSOLL SMART CONTRACT (ERC-721)",
                 "es": "✓ VERIFICADO POR CONTRATO INTELIGENTE PLIMSOLL (ERC-721)"
-            }
+            },
+            "target_vessel": { "en": "TARGET VESSEL", "es": "BUQUE OBJETIVO", "pt": "NAVIO ALVO", "zh": "目标船舶" },
+            "operator": { "en": "OPERATOR", "es": "OPERADOR", "pt": "OPERADOR", "zh": "操作员" },
+            "true_aft": { "en": "TRUE AFT (POPA)", "es": "POPA REAL", "pt": "POPA REAL", "zh": "实际艉吃水" },
+            "true_mid": { "en": "TRUE MID (MEDIO)", "es": "MEDIO REAL", "pt": "MEIO REAL", "zh": "实际仲吃水" },
+            "true_fwd": { "en": "TRUE FWD (PROA)", "es": "PROA REAL", "pt": "PROA REAL", "zh": "实际艏吃水" },
+            "net_cargo_disp": { "en": "NET CARGO DISPLACEMENT", "es": "DESPLAZAMIENTO NETO", "pt": "DESLOCAMENTO LÍQUIDO", "zh": "净载货排水量" },
+            "security_clearance": { 
+                "en": "SECURITY CLEARANCE: DNV_A+ CLASS", 
+                "es": "NIVEL DE SEGURIDAD: CLASE DNV_A+", 
+                "pt": "NÍVEL DE SEGURANÇA: CLASSE DNV_A+", 
+                "zh": "安全权限：DNV_A+ 级" 
+            },
+            "hydrostatic_telemetry": { 
+                "en": "I. HYDROSTATIC TELEMETRY & DISPLACEMENT", 
+                "es": "I. TELEMETRÍA HIDROSTÁTICA Y DESPLAZAMIENTO", 
+                "pt": "I. TELEMETRIA HIDROSTÁTICA E DESLOCAMENTO", 
+                "zh": "I. 静水力电测与排水量" 
+            },
+            "cortex_verification": { 
+                "en": "II. CORTEX VISUAL VERIFICATION", 
+                "es": "II. VERIFICACIÓN VISUAL CORTEX", 
+                "pt": "II. VERIFICAÇÃO VISUAL CORTEX", 
+                "zh": "II. CORTEX 视觉验证" 
+            },
+            "cortex_confidence": { "en": "CORTEX CONFIDENCE", "es": "CONFIANZA CORTEX", "pt": "CONFIANÇA CORTEX", "zh": "CORTEX 置信度" }
         }
 
     def _t(self, key, lang='en'):
@@ -201,7 +226,7 @@ class PDFGenerator:
         c.setFillColor(colors.white)
         c.drawRightString(width - 2*cm, height - 1.6*cm, f"DATE: {survey_data.get('timestamp', now.strftime('%Y-%m-%d %H:%M:%S UTC'))}")
         c.setFillColor(colors.red)
-        c.drawRightString(width - 2*cm, height - 2*cm, "SECURITY CLEARANCE: DNV_A+ CLASS")
+        c.drawRightString(width - 2*cm, height - 2*cm, self._t("security_clearance", lang))
         
         # ---------------------------------------------------------
         # 2. VESSEL IDENTITY & MISSION BOARD
@@ -214,8 +239,8 @@ class PDFGenerator:
         
         c.setFont("Helvetica-Bold", 10)
         c.setFillColor(brand_surface)
-        c.drawString(2.5*cm, board_y + 1*cm, "TARGET VESSEL:")
-        c.drawString(10*cm, board_y + 1*cm, "OPERATOR:")
+        c.drawString(2.5*cm, board_y + 1*cm, f"{self._t('target_vessel', lang)}:")
+        c.drawString(10*cm, board_y + 1*cm, f"{self._t('operator', lang)}:")
         
         c.setFont("Courier-Bold", 11)
         c.setFillColor(colors.black)
@@ -229,7 +254,7 @@ class PDFGenerator:
         
         # Section Title
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(2*cm, grid_y + 3*cm, "I. HYDROSTATIC TELEMETRY & DISPLACEMENT")
+        c.drawString(2*cm, grid_y + 3*cm, self._t("hydrostatic_telemetry", lang))
         c.setStrokeColor(brand_gold)
         c.setLineWidth(2)
         c.line(2*cm, grid_y + 2.7*cm, width - 2*cm, grid_y + 2.7*cm)
@@ -237,9 +262,9 @@ class PDFGenerator:
         # Col 1: Drafts
         c.setFont("Helvetica-Bold", 8)
         c.setFillColor(colors.darkgrey)
-        c.drawString(2*cm, grid_y + 1.8*cm, "TRUE AFT (POPA)")
-        c.drawString(6*cm, grid_y + 1.8*cm, "TRUE MID (MEDIO)")
-        c.drawString(10*cm, grid_y + 1.8*cm, "TRUE FWD (PROA)")
+        c.drawString(2*cm, grid_y + 1.8*cm, self._t("true_aft", lang))
+        c.drawString(6*cm, grid_y + 1.8*cm, self._t("true_mid", lang))
+        c.drawString(10*cm, grid_y + 1.8*cm, self._t("true_fwd", lang))
         
         c.setFont("Courier-Bold", 14)
         c.setFillColor(colors.black)
@@ -252,7 +277,7 @@ class PDFGenerator:
         c.rect(14*cm, grid_y, 5*cm, 2.2*cm, fill=1, stroke=0)
         c.setFillColor(brand_gold)
         c.setFont("Helvetica-Bold", 7)
-        c.drawString(14.5*cm, grid_y + 1.6*cm, "NET CARGO DISPLACEMENT")
+        c.drawString(14.5*cm, grid_y + 1.6*cm, self._t("net_cargo_disp", lang))
         
         c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 18)
@@ -261,8 +286,8 @@ class PDFGenerator:
         # Minor variables
         c.setFont("Helvetica-Bold", 8)
         c.setFillColor(colors.darkgrey)
-        c.drawString(2*cm, grid_y, f"CORTEX CONFIDENCE: {survey_data.get('confidence', 0)*100:.2f}%")
-        c.drawString(8*cm, grid_y, f"SEA STATE: {survey_data.get('sea_state', 'MODERATE')}")
+        c.drawString(2*cm, grid_y, f"{self._t('cortex_confidence', lang)}: {survey_data.get('confidence', 0)*100:.2f}%")
+        c.drawString(8*cm, grid_y, f"{self._t('sea_state', lang)}: {survey_data.get('sea_state', 'MODERATE')}")
         
         # ---------------------------------------------------------
         # 4. CORTEX VISUAL EVIDENCE & SENSOR GRID
@@ -270,7 +295,7 @@ class PDFGenerator:
         evidence_y_top = grid_y - 2*cm
         c.setFont("Helvetica-Bold", 12)
         c.setFillColor(colors.black)
-        c.drawString(2*cm, evidence_y_top, "II. CORTEX VISUAL VERIFICATION")
+        c.drawString(2*cm, evidence_y_top, self._t("cortex_verification", lang))
         c.setStrokeColor(brand_gold)
         c.setLineWidth(2)
         c.line(2*cm, evidence_y_top - 0.3*cm, width - 2*cm, evidence_y_top - 0.3*cm)

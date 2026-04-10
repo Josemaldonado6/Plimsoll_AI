@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Search, 
   ChevronRight, 
@@ -88,9 +88,10 @@ export default function Step1Identity() {
                   <button 
                     key={op.id}
                     onClick={() => handleResumeOperation(op.id)}
-                    className="p-4 rounded-2xl bg-[#1b1f2c] border border-white/5 hover:border-[#e9c349]/50 transition-all text-left group"
+                    className="p-4 rounded-2xl bg-[#1b1f2c]/50 backdrop-blur-md border border-white/5 hover:border-[#e9c349]/50 hover:bg-[#e9c349]/10 transition-all text-left group relative overflow-hidden"
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#e9c349]/5 -mr-8 -mt-8 rounded-full blur-2xl group-hover:bg-[#e9c349]/10 transition-colors" />
+                    <div className="flex justify-between items-start relative z-10">
                       <div>
                         <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{op.id}</div>
                         <div className="text-white font-black uppercase text-lg group-hover:text-[#e9c349] transition-colors">{op.vessel_name}</div>
@@ -102,8 +103,8 @@ export default function Step1Identity() {
                         {op.status}
                       </div>
                     </div>
-                    <div className="mt-3 text-xs text-slate-400 font-mono">
-                      {t('v5.log_entries', 'Log Entries')}: {op.scans.length} ({(op.scans[op.scans.length - 1]?.phase) || 'NO_DATA'})
+                    <div className="mt-3 text-xs text-slate-400 font-mono relative z-10">
+                      {t('v5.audit_trail', 'Audit Trail')}: {op.scans.length} ({(op.scans[op.scans.length - 1]?.phase) || 'NO_DATA'})
                     </div>
                   </button>
                 ))}
@@ -121,7 +122,7 @@ export default function Step1Identity() {
                   </div>
                   <input 
                     type="text" 
-                    placeholder="ENTER IMO NUMBER (e.g. 9823471)"
+                    placeholder={t('dashboard.imo_number', 'ENTER IMO NUMBER')}
                     value={imoSearch}
                     onChange={(e) => setImoSearch(e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl py-6 pl-16 pr-6 font-mono text-xl text-white focus:outline-none focus:border-[#e9c349] transition-all placeholder:text-slate-700 uppercase"
@@ -134,10 +135,10 @@ export default function Step1Identity() {
                     "px-10 py-6 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3",
                     isSearching 
                       ? "bg-slate-800 text-slate-500 animate-pulse" 
-                      : "bg-[#e9c349] text-black hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(233,195,73,0.2)]"
+                      : "bg-[#e9c349] text-black hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(233,195,73,0.3)]"
                   )}
                 >
-                  {isSearching ? 'SCROLLING...' : 'ACQUIRE TARGET'}
+                  {isSearching ? 'SCROLLING...' : t('v5.acquire_target', 'ACQUIRE TARGET')}
                   <ChevronRight size={20} />
                 </button>
               </div>
@@ -157,17 +158,17 @@ export default function Step1Identity() {
                   <Ship size={32} />
                 </div>
                 <div>
-                  <h3 className="text-slate-500 font-black text-[10px] uppercase tracking-widest">Selected Vessel</h3>
+                  <h3 className="text-slate-500 font-black text-[10px] uppercase tracking-widest">{t('v5.selected_vessel', 'Selected Vessel')}</h3>
                   <p className="text-xl font-black text-white uppercase tracking-tight">{vesselInfo.name}</p>
                 </div>
               </div>
-              <div className="bg-[#1b1f2c] border border-white/5 p-6 rounded-3xl grid grid-cols-2 gap-4">
+              <div className="bg-[#1b1f2c]/50 backdrop-blur-sm border border-white/5 p-6 rounded-3xl grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-slate-500 font-black text-[8px] uppercase tracking-widest">LBP_CORR</h3>
+                  <h3 className="text-slate-500 font-black text-[8px] uppercase tracking-widest">{t('v5.lbp_corr', 'LBP_CORR')}</h3>
                   <p className="text-lg font-mono font-bold text-[#00e639]">{vesselInfo.lbp || '---'} m</p>
                 </div>
                 <div>
-                  <h3 className="text-slate-500 font-black text-[8px] uppercase tracking-widest">BEAM_MAX</h3>
+                  <h3 className="text-slate-500 font-black text-[8px] uppercase tracking-widest">{t('v5.beam_max', 'BEAM_MAX')}</h3>
                   <p className="text-lg font-mono font-bold text-[#00e639]">{vesselInfo.beam || '---'} m</p>
                 </div>
               </div>
@@ -186,19 +187,19 @@ export default function Step1Identity() {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-white font-black text-lg uppercase tracking-tight flex items-center gap-2">
-                    Hydrostatic Table
+                    {t('v5.hydrostatic_matrix', 'Hydrostatic Matrix')}
                     <ShieldCheck size={16} className="text-[#00e639]" />
                   </h3>
-                  <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-1">Manual structural override</p>
+                  <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-1">{t('v5.manual_structural_override', 'Manual structural override')}</p>
                 </div>
                 <div className="text-[10px] font-black text-[#e9c349] border border-[#e9c349]/20 px-2 py-1 rounded">
-                  DNV_TYPE_APPROVED
+                  {t('v5.dnv_certified', 'DNV_TYPE_APPROVED')}
                 </div>
               </div>
 
               <div className="space-y-4">
                  <div className="flex justify-between items-center text-xs p-4 rounded-xl bg-white/5 border border-white/5">
-                   <span className="text-slate-400 font-bold">LBP (Length Between Perpendiculars)</span>
+                   <span className="text-slate-400 font-bold">{t('config.lbp', 'LBP (Length Between Perpendiculars)')}</span>
                    <span className="text-white font-mono font-bold">{vesselInfo.lbp || 'N/A'} m</span>
                  </div>
                  <div className="flex justify-between items-center text-xs p-4 rounded-xl bg-white/5 border border-white/5">
@@ -212,7 +213,7 @@ export default function Step1Identity() {
               </div>
 
               <button className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-white hover:border-[#e9c349]/30 transition-all flex items-center justify-center gap-2">
-                <Info size={14} /> Configure Full Data Set
+                <Info size={14} /> {t('v5.terminal_logic', 'Configure Full Data Set')}
               </button>
             </div>
           </div>
@@ -235,11 +236,11 @@ export default function Step1Identity() {
 
        {/* HUD SYSTEM LOG OVERLAY (DECORATIVE) */}
        <div className="absolute bottom-4 left-8 pointer-events-none hidden md:block">
-         <div className="font-mono text-[8px] text-[#e9c349]/30 leading-tight">
-            <div>SYS_LOAD_MODULE: STEP_01_IDENTITY</div>
-            <div>STATUS: WAITING_FOR_USER_INPUT</div>
-            <div>SESSION_TOKEN: 0xFD4422...</div>
-         </div>
+        <div className="font-mono text-[8px] text-[#e9c349]/30 leading-tight">
+           <div>{t('v5.sys_load_module', 'SYS_LOAD_MODULE')}: STEP_01_IDENTITY</div>
+           <div>{t('v5.status_locked', 'STATUS')}: {t('v5.waiting_user', 'WAITING_FOR_USER_INPUT')}</div>
+           <div>{t('v5.session_token', 'SESSION_TOKEN')}: 0xFD4422...</div>
+        </div>
        </div>
     </div>
   );

@@ -31,8 +31,8 @@ export default function App() {
         showLanding, setShowLanding,
         activeTab, setActiveTab,
         isOnline, setIsOnline,
-        currentResult, setCurrentResult,
-        isAnalyzing, setIsAnalyzing,
+        setCurrentResult,
+        setIsAnalyzing,
         user, token,
         syncDrafts,
         vesselInfo,
@@ -109,7 +109,7 @@ export default function App() {
 
         } catch (error: any) {
             console.error("Analysis failed", error);
-            alert("Analysis failed. Ensure Cortex Hub is online.");
+            alert(t('v5.analysis_failed', 'Analysis failed. Ensure Cortex Hub is online.'));
         } finally {
             setIsAnalyzing(false);
         }
@@ -146,7 +146,7 @@ export default function App() {
             }, 100)
         } catch (error) {
             console.error("Download failed", error)
-            alert("Certification export failed. Retrying logic...")
+            alert(t('v5.export_failed', 'Certification export failed. Retrying logic...'))
         }
     }
 

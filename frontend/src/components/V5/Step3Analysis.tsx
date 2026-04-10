@@ -6,8 +6,7 @@ import {
   ArrowRight,
   TrendingDown,
   Gauge,
-  Zap,
-  Info
+  Zap
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
@@ -15,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function Step3Analysis({ onNext }: { onNext: () => void }) {
   const { t } = useTranslation();
-  const { operations, activeOperationId, vesselInfo } = useStore();
+  const { operations, activeOperationId } = useStore();
   const activeOp = operations.find(o => o.id === activeOperationId);
   const latestScan = activeOp?.scans[activeOp.scans.length - 1];
 
@@ -26,9 +25,9 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
         <div className="w-20 h-20 border-2 border-dashed border-[#e9c349]/20 rounded-full flex items-center justify-center animate-spin-slow">
-            <Activity className="text-slate-800" size={32} />
+            <Activity className="text-[#e9c349]/20" size={32} />
         </div>
-        <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px]">Awaiting Core Analysis Results...</p>
+        <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px]">{t('v5.awaiting_core', 'Awaiting Core Analysis Results...')}</p>
       </div>
     );
   }
@@ -95,28 +94,28 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
             </div>
 
             {/* WAVE SMOOTHING HUD OVERLAY */}
-            <div className="bg-[#0a0e1a] border border-[#e9c349]/10 rounded-3xl p-6 flex flex-wrap gap-8 items-center justify-between">
+            <div className="bg-[#0a0e1a]/80 backdrop-blur-xl border border-[#e9c349]/10 rounded-3xl p-6 flex flex-wrap gap-8 items-center justify-between">
                 <div className="flex items-center gap-4">
                     <TrendingDown className="text-[#00e639]" size={24} />
                     <div>
-                        <p className="text-slate-500 font-black text-[8px] uppercase tracking-widest">Physics Stability</p>
+                        <p className="text-slate-500 font-black text-[8px] uppercase tracking-widest">{t('v5.physics_stability', 'Physics Stability')}</p>
                         <p className="text-[#00e639] font-black text-sm uppercase">{t('v5.wave_suppression', 'Wave Suppression Active')}</p>
                     </div>
                 </div>
                 <div className="flex gap-10">
                     <div>
-                        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">Sea State</p>
+                        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">{t('dashboard.sea_state', 'Sea State')}</p>
                         <p className="text-white font-black text-xs uppercase">{latestScan.sea_state || 'MODERATE'}</p>
                     </div>
                     <div>
-                        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">Data Reliability</p>
+                        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">{t('dashboard.confidence', 'Data Reliability')}</p>
                         <p className="text-[#e9c349] font-black text-xs uppercase">{latestScan.data_reliability ? (latestScan.data_reliability * 100).toFixed(1) : '98.4'}%</p>
                     </div>
                 </div>
                 <div className="h-10 w-[1px] bg-white/5"></div>
                 <div className="flex items-center gap-3">
-                   <ShieldCheck className="text-[#e9c349]" size={20} />
-                   <span className="text-white font-black text-[9px] uppercase tracking-widest italic">SOVEREIGN_LOGIC_ENABLED</span>
+                   <ShieldCheck className="text-[#e9c349] drop-shadow-[0_0_8px_#e9c349]" size={20} />
+                   <span className="text-white font-black text-[9px] uppercase tracking-widest italic">{t('v5.sovereign_logic', 'SOVEREIGN_LOGIC_ENABLED')}</span>
                 </div>
             </div>
         </div>
@@ -126,8 +125,8 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
             <div className="bg-[#1b1f2c] border border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h3 className="text-white font-black text-lg uppercase tracking-tight italic">Audit Trail</h3>
-                        <p className="text-slate-500 text-[9px] uppercase tracking-widest">Kalman Filter Convergence</p>
+                        <h3 className="text-white font-black text-lg uppercase tracking-tight italic">{t('v5.audit_trail', 'Audit Trail')}</h3>
+                        <p className="text-slate-500 text-[9px] uppercase tracking-widest">{t('v5.kalman_convergence', 'Kalman Filter Convergence')}</p>
                     </div>
                     <Gauge className="text-[#e9c349]/40" size={24} />
                 </div>

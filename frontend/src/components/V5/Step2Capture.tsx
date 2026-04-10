@@ -18,13 +18,12 @@ import { useTranslation } from 'react-i18next';
 
 export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, phase: SurveyPhase) => void }) {
   const { t } = useTranslation();
-  const { vesselInfo, isAnalyzing, operations, activeOperationId } = useStore();
+  const { vesselInfo, isAnalyzing } = useStore();
   const [captureMode, setCaptureMode] = useState<'drone' | 'manual'>('manual');
   const [selectedPhase, setSelectedPhase] = useState<SurveyPhase>('INITIAL');
   const [isSimulatingStream, setIsSimulatingStream] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const activeOp = operations.find(o => o.id === activeOperationId);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -50,9 +49,9 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
         {/* LEFT HUD: TELEMETRY & MODE SELECT */}
         <div className="lg:col-span-3 space-y-4 flex flex-col justify-center">
             <div className="space-y-1 mb-8">
-                <h3 className="text-[#e9c349] font-black text-xs uppercase tracking-[0.2em]">Mission Profile</h3>
+                <h3 className="text-[#e9c349] font-black text-xs uppercase tracking-[0.2em]">{t('v5.operation_phase', 'Mission Profile')}</h3>
                 <p className="text-white text-xl font-black uppercase tracking-tight truncate">{vesselInfo.name}</p>
-                <p className="text-slate-600 text-[10px] font-mono tracking-widest">IMO: {vesselInfo.imo}</p>
+                <p className="text-slate-600 text-[10px] font-mono tracking-widest">{t('dashboard.imo_number', 'IMO')}: {vesselInfo.imo}</p>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
@@ -65,7 +64,7 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
                 >
                     <div className="flex items-center gap-3">
                         <Navigation size={18} />
-                        <span className="font-black text-[10px] uppercase tracking-widest">Drone Link</span>
+                        <span className="font-black text-[10px] uppercase tracking-widest">{t('v5.drone_link', 'Drone Link')}</span>
                     </div>
                     <Wifi size={14} className={cn(captureMode === 'drone' && "animate-pulse")} />
                 </button>
@@ -78,7 +77,7 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
                 >
                     <div className="flex items-center gap-3">
                         <Upload size={18} />
-                        <span className="font-black text-[10px] uppercase tracking-widest">Manual Upload</span>
+                        <span className="font-black text-[10px] uppercase tracking-widest">{t('v5.manual_upload', 'Manual Upload')}</span>
                     </div>
                     <Video size={14} />
                 </button>
@@ -109,20 +108,20 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
             </div>
 
             {captureMode === 'drone' && (
-                <div className="bg-black/40 border border-[#e9c349]/20 p-6 rounded-2xl space-y-6 mt-4">
+                <div className="bg-[#1b1f2c]/50 backdrop-blur-md border border-[#e9c349]/20 p-6 rounded-2xl space-y-6 mt-4">
                    <div className="flex justify-between items-center">
-                     <span className="text-[10px] font-black text-slate-500 uppercase">Battery</span>
+                     <span className="text-[10px] font-black text-slate-500 uppercase">{t('v5.battery', 'Battery')}</span>
                      <div className="flex items-center gap-2">
                         <span className="text-white font-mono font-bold text-xs">84%</span>
                         <Battery size={14} className="text-[#00e639]" />
                      </div>
                    </div>
                    <div className="flex justify-between items-center">
-                     <span className="text-[10px] font-black text-slate-500 uppercase">Altitude</span>
+                     <span className="text-[10px] font-black text-slate-500 uppercase">{t('v5.altitude', 'Altitude')}</span>
                      <span className="text-white font-mono font-bold text-xs">12.5m</span>
                    </div>
                    <div className="flex justify-between items-center">
-                     <span className="text-[10px] font-black text-slate-500 uppercase">Link Quality</span>
+                     <span className="text-[10px] font-black text-slate-500 uppercase">{t('v5.link_quality', 'Link Quality')}</span>
                      <span className="text-[#00e639] font-mono font-bold text-xs">98ms</span>
                    </div>
                 </div>
@@ -138,8 +137,8 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
                         <Camera size={40} className="text-[#e9c349]" />
                     </div>
                     <div className="text-center">
-                        <p className="text-white font-black uppercase tracking-[0.2em]">{isSimulatingStream ? 'FEED_LIVE' : 'LINKING_TO_UAV...'}</p>
-                        <p className="text-slate-500 text-[10px] font-mono mt-2">ENCRYPTED_SIGNAL_0X449</p>
+                        <p className="text-white font-black uppercase tracking-[0.2em]">{isSimulatingStream ? t('pilot.link_active', 'FEED_LIVE') : t('pilot.waiting_link', 'LINKING_TO_UAV...')}</p>
+                        <p className="text-slate-500 text-[10px] font-mono mt-2">{t('v5.encrypted_signal', 'ENCRYPTED_SIGNAL_0X449')}</p>
                     </div>
                     <button 
                       onClick={() => setIsSimulatingStream(!isSimulatingStream)}
@@ -193,16 +192,16 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
 
         {/* RIGHT HUD: MISSION LOGS & ACTION */}
         <div className="lg:col-span-3 space-y-4 flex flex-col justify-center">
-            <div className="bg-[#171b28] border border-white/5 p-6 rounded-2xl h-64 flex flex-col">
-                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-3 mb-4">Operations Log</h4>
+            <div className="bg-[#171b28]/80 backdrop-blur-md border border-white/5 p-6 rounded-2xl h-64 flex flex-col">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-3 mb-4">{t('v5.operations_log', 'Operations Log')}</h4>
                 <div className="flex-1 font-mono text-[9px] space-y-3 text-slate-500 overflow-y-auto custom-scrollbar">
                     <div className="flex gap-2">
                         <span className="text-[#e9c349]">[OK]</span>
-                        <span>MISSION_STANDBY</span>
+                        <span>{t('v5.mission_standby', 'MISSION_STANDBY')}</span>
                     </div>
                     <div className="flex gap-2">
                          <span className="text-[#e9c349]">[OK]</span>
-                         <span>TARGET_ACQUIRED_{vesselInfo.imo}</span>
+                         <span>TARGET_{vesselInfo.imo}_ACQUIRED</span>
                     </div>
                     <div className="flex gap-2 text-[#00e639]">
                          <span>[SYSTEM]</span>
@@ -210,7 +209,7 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
                     </div>
                     <div className="flex gap-2 border-t border-white/5 pt-2 mt-2 animate-pulse">
                          <span className="text-[#e9c349]">&gt;</span>
-                         <span>WAITING_FOR_OPTICAL_FEED...</span>
+                         <span>{t('dashboard.awaiting', 'WAITING_FOR_OPTICAL_FEED...')}</span>
                     </div>
                 </div>
             </div>
@@ -218,8 +217,8 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
             <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-2xl flex items-start gap-4">
                 <ShieldAlert size={20} className="text-red-500 shrink-0" />
                 <div>
-                   <h4 className="text-red-500 font-black text-[10px] uppercase">Safety Protocol</h4>
-                   <p className="text-slate-500 text-[9px] font-medium leading-relaxed mt-1">Ensure drone is focused on Plimsoll marks and camera level is at 0 degrees for maximum precision.</p>
+                   <h4 className="text-red-500 font-black text-[10px] uppercase">{t('v5.safety_protocol', 'Safety Protocol')}</h4>
+                   <p className="text-slate-500 text-[9px] font-medium leading-relaxed mt-1">{t('v5.safety_protocol_desc', 'Ensure drone is focused on Plimsoll marks and camera level is at 0 degrees for maximum precision.')}</p>
                 </div>
             </div>
         </div>
@@ -227,8 +226,8 @@ export default function Step2Capture({ onAnalyze }: { onAnalyze: (file: File, ph
 
       {/* FOOTER ACTION BUTTONS (OPTIONAL OVERRIDE) */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
-          <button className="bg-white/5 border border-white/10 px-8 py-3 rounded-full text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] hover:text-white transition-all flex items-center gap-3">
-             <Play size={14} className="text-[#e9c349]" /> Begin Tactical Scan
+          <button className="bg-[#0a0e1a]/80 backdrop-blur-xl border border-white/10 px-8 py-3 rounded-full text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#e9c349] hover:border-[#e9c349]/50 hover:shadow-[0_0_20px_rgba(233,195,73,0.2)] transition-all flex items-center gap-3 group">
+             <Play size={14} className="text-[#e9c349] group-hover:scale-125 transition-transform" /> {t('pilot.auto_survey', 'Begin Tactical Scan')}
           </button>
       </div>
 

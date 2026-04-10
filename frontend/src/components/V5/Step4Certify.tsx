@@ -5,13 +5,10 @@ import {
   Share2, 
   FileText, 
   CheckCircle2,
-  Lock,
   QrCode,
-  RotateCcw,
   Verified
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 
 
@@ -45,7 +42,6 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
       netCargo = (coreDraft ? (coreDraft * 100 * tpc) - 5000 : 0);
   }
 
-  const displayWeight = Math.max(0, netCargo);
 
   return (
     <div className="flex-1 flex flex-col p-8 md:p-12 animate-fade-in relative">
@@ -55,11 +51,11 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
         {/* LEFT: DIGITAL CERTIFICATION SEAL */}
         <div className="lg:col-span-5 flex flex-col gap-8 items-center">
             <div className="relative group w-full flex justify-center">
-                <div className="relative w-80 h-80 border-4 border-[#00e639]/30 rounded-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-xl shadow-[0_0_80px_rgba(0,230,57,0.1)]">
-                   <div className="absolute top-0 right-10 p-4 bg-[#00e639] text-black rounded-full rotate-12 shadow-2xl">
+                <div className="relative w-80 h-80 border-4 border-[#00e639]/30 rounded-full flex flex-col items-center justify-center bg-[#0a0e1a]/40 backdrop-blur-xl shadow-[0_0_100px_rgba(0,230,57,0.15)] group-hover:shadow-[0_0_120px_rgba(0,230,57,0.25)] transition-all duration-700">
+                   <div className="absolute top-0 right-10 p-4 bg-[#00e639] text-black rounded-full rotate-12 shadow-[0_0_20px_#00e639] animate-pulse">
                         <Verified size={32} />
                    </div>
-                   <ShieldCheck size={120} className="text-[#00e639] mb-4" />
+                   <ShieldCheck size={120} className="text-[#00e639] mb-4 drop-shadow-[0_0_15px_#00e639]" />
                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-4 text-center">
                     <CheckCircle2 size={24} className="text-[#00e639]" />
                     {t('v5.mission_certified', 'Mission Certified')}
@@ -71,7 +67,7 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
                 </div>
             </div>
 
-            <div className="bg-white/5 border border-white/5 rounded-3xl p-8 relative overflow-hidden w-full">
+            <div className="bg-[#1b1f2c]/50 backdrop-blur-md border border-white/5 rounded-3xl p-8 relative overflow-hidden w-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#00e639]/10 rounded-bl-full pointer-events-none" />
                 <h3 className="text-[#00e639] font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-6">
                     <ShieldCheck size={14} /> {t('v5.sovereign_proof', 'Sovereign Cryptographic Proof')}
@@ -84,9 +80,9 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
 
         {/* RIGHT: FINAL ACTIONS & SUMMARY */}
         <div className="lg:col-span-7 space-y-8">
-            <div className="bg-[#171b28] border border-white/5 p-10 rounded-[3rem] space-y-8">
+            <div className="bg-[#171b28] border border-white/5 p-10 rounded-[3rem] space-y-8 shadow-inner">
                 <div>
-                   <h3 className="text-slate-500 font-black text-xs uppercase tracking-[0.2em] mb-2">{vesselInfo.name} // FINAL REPORT</h3>
+                   <h3 className="text-slate-500 font-black text-xs uppercase tracking-[0.2em] mb-2">{vesselInfo.name} // {t('v5.final_report', 'FINAL REPORT')}</h3>
                    <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
                     <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest border-b border-white/10 pb-2 mb-4">
                         {t('v5.verified_displacement', 'Verified Displacement')}
@@ -138,7 +134,7 @@ export default function Step4Certify({ onExport, onReset }: { onExport: (id: num
                         <img src="/logo.png" alt="Plimsoll" className="w-full h-full object-contain filter grayscale" />
                    </div>
                    <div className="text-left font-mono text-[8px] text-slate-700 leading-tight uppercase">
-                      Official Draft Survey Master Log<br />Powered by Plimsoll Sovereign Engine
+                      {t('v5.official_audit', 'Official Draft Survey Master Log')}<br />{t('v5.powered_by', 'Powered by Plimsoll Sovereign Engine')}
                    </div>
                 </div>
                 
