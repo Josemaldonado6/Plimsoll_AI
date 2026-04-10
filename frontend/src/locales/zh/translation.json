@@ -335,6 +335,18 @@
         "hub_updated": "Cortex Hub 已更新",
         "void_reason_prompt": "输入作废原因（法定要求）：",
         "water_density": "海水密度",
-        "kalman_gain": "卡尔曼增益因子"
+        "kalman_gain": "卡尔曼增益因子",
+        "ballast_control": "主动压载控制",
+        "plc_connected": "MODBUS/TCP: 就绪",
+        "live_telemetry": "实时 Modbus/TCP 遥测",
+        "tank_matrix": "压载舱液位矩阵",
+        "oed_solver": "OED 物理求解器",
+        "target_oed": "目标 OED",
+        "fuel_savings": "预计燃料节省",
+        "executing": "正在传输到 PLC...",
+        "apply_correction": "应用压载修正",
+        "audit_warning": "操作将被记录在技术审计日志中",
+        "pumps_active": "泵已启动。正在调整压载至 OED。",
+        "pump_fail": "PLC 连接超时。"
     }
 }

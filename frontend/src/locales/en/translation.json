@@ -340,6 +340,18 @@
         "hub_updated": "Cortex Hub Updated",
         "void_reason_prompt": "Enter reason for invalidation (Legal Requirement):",
         "water_density": "Water Density",
-        "kalman_gain": "Kalman Gain Factor"
+        "kalman_gain": "Kalman Gain Factor",
+        "ballast_control": "Active Ballast Control",
+        "plc_connected": "MODBUS/TCP: READY",
+        "live_telemetry": "Live Modbus/TCP Telemetry",
+        "tank_matrix": "Tank Level Matrix",
+        "oed_solver": "OED Physics Solver",
+        "target_oed": "Target OED",
+        "fuel_savings": "Projected Fuel Savings",
+        "executing": "TRANSMITTING TO PLC...",
+        "apply_correction": "APPLY BALLAST CORRECTION",
+        "audit_warning": "ACTION WILL BE LOGGED IN TECHNICAL AUDIT TRAIL",
+        "pumps_active": "Pumps Engaged. Adjusting Ballast to OED.",
+        "pump_fail": "PLC Connection Timeout."
     }
 }

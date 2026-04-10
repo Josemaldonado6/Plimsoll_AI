@@ -2,7 +2,6 @@ import {
   Settings, 
   X, 
   Globe, 
-  Zap, 
   Shield, 
   Terminal,
   Cpu,
@@ -15,17 +14,11 @@ import { useState } from 'react';
 
 export default function SettingsV5({ onClose }: { onClose: () => void }) {
     const { t, i18n } = useTranslation();
-    const { edgeUrl, setEdgeUrl, auditLogs, logout, resetState } = useStore();
-    const [tempEdgeUrl, setTempEdgeUrl] = useState(edgeUrl);
+    const { auditLogs, logout, resetState } = useStore();
     const [density, setDensity] = useState(1.025);
 
     const changeLanguage = (lng: string) => {
         i18n.changeLanguage(lng);
-    };
-
-    const handleSaveEdge = () => {
-        setEdgeUrl(tempEdgeUrl);
-        alert(t('v5.hub_updated', 'Cortex Hub Updated'));
     };
 
     const handleReset = () => {
@@ -95,40 +88,7 @@ export default function SettingsV5({ onClose }: { onClose: () => void }) {
                         </div>
                     </div>
 
-                    {/* CONNECTIVITY */}
-                    <div className="space-y-6">
-                        <h2 className="flex items-center gap-3 text-white font-black uppercase tracking-widest text-xs">
-                            <Zap size={16} className="text-[#00e639]" /> {t('v5.connectivity', 'Cortex Hub Connectivity')}
-                        </h2>
-                        <div className="bg-[#171b28] border border-white/5 rounded-3xl p-8 space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest ml-1">Edge Hub Address</label>
-                                <div className="flex gap-4">
-                                    <input 
-                                        type="text" 
-                                        value={tempEdgeUrl}
-                                        onChange={(e) => setTempEdgeUrl(e.target.value)}
-                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-6 py-4 text-white font-mono text-sm focus:border-[#e9c349]/50 outline-none transition-all"
-                                    />
-                                    <button 
-                                      onClick={handleSaveEdge}
-                                      className="px-8 bg-[#e9c349] text-black font-black uppercase tracking-widest text-[10px] rounded-xl hover:scale-105 active:scale-95 transition-all"
-                                    >
-                                        Apply
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-2 bg-green-500/10 text-[#00e639] px-4 py-2 rounded-full text-[9px] font-black tracking-widest">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#00e639] animate-pulse"></span>
-                                    {t('v5.hub_online', 'LATENCY: 12ms // STATUS: OPTIMAL')}
-                                </div>
-                                <div className="text-slate-600 text-[9px] font-mono italic">
-                                    {t('v5.hub_info', 'Hybrid-Edge protocol active. Using local NPU for inference.')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
 
                     {/* ENGINE PARAMS */}
                     <div className="space-y-6">

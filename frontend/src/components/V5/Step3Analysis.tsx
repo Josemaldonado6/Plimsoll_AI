@@ -6,15 +6,19 @@ import {
   ArrowRight,
   TrendingDown,
   Gauge,
-  Zap
+  Zap,
+  Droplet
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import BallastCommanderV5 from './BallastCommanderV5';
 
 export default function Step3Analysis({ onNext }: { onNext: () => void }) {
   const { t } = useTranslation();
   const { operations, activeOperationId } = useStore();
+  const [commanderOpen, setCommanderOpen] = useState(false);
   const activeOp = operations.find(o => o.id === activeOperationId);
   const latestScan = activeOp?.scans[activeOp.scans.length - 1];
 
@@ -118,6 +122,22 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
                    <span className="text-white font-black text-[9px] uppercase tracking-widest italic">{t('v5.sovereign_logic', 'SOVEREIGN_LOGIC_ENABLED')}</span>
                 </div>
             </div>
+            
+            <button 
+                onClick={() => setCommanderOpen(true)}
+                className="w-full mt-6 bg-[#171b28] border border-[#00e639]/30 hover:bg-[#00e639]/10 text-[#00e639] rounded-3xl p-6 transition-all flex items-center justify-between group"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-[#00e639]/20 rounded-xl group-hover:scale-110 transition-transform">
+                        <Droplet size={24} />
+                    </div>
+                    <div className="text-left">
+                        <div className="font-black text-xs uppercase tracking-widest">{t('v5.ballast_control', 'Active Ballast Control')}</div>
+                        <div className="text-[10px] uppercase font-mono text-slate-500">{t('v5.plc_connected', 'MODBUS/TCP: READY')}</div>
+                    </div>
+                </div>
+                <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform opacity-50 group-hover:opacity-100" />
+            </button>
         </div>
 
         {/* RIGHT PANEL: KALMAN FILTER GRAPH (Physics Stability) */}
@@ -165,8 +185,12 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
                         </p>
                     </div>
 
-                    <button onClick={onNext} className="w-full py-5 rounded-xl bg-white text-black font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#e9c349] transition-colors mt-6 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                        {t('v5.init_cert', 'Initialize Certification')} <ArrowRight size={20} />
+                    <button 
+                        onClick={onNext}
+                        className="w-full py-8 mt-auto rounded-[2.5rem] bg-[#e9c349] hover:bg-yellow-400 text-black font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-98 shadow-[0_0_30px_rgba(233,195,73,0.2)]"
+                    >
+                        {t('v5.proceed_cert_phase', 'PROCEED TO CERTIFICATION PHASE')}
+                        <ArrowRight size={24} />
                     </button>
                     
                     <div className="text-center">
@@ -179,6 +203,8 @@ export default function Step3Analysis({ onNext }: { onNext: () => void }) {
             </div>
         </div>
       </div>
+      
+      {commanderOpen && <BallastCommanderV5 onClose={() => setCommanderOpen(false)} />}
     </div>
   );
 }

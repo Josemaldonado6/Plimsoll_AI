@@ -421,6 +421,18 @@
         "hub_updated": "Cortex Hub Actualizado",
         "void_reason_prompt": "Ingrese el motivo de la invalidación (Requerimiento Legal):",
         "water_density": "Densidad del Agua",
-        "kalman_gain": "Factor de Ganancia Kalman"
+        "kalman_gain": "Factor de Ganancia Kalman",
+        "ballast_control": "Control Activo de Lastre",
+        "plc_connected": "MODBUS/TCP: LISTO",
+        "live_telemetry": "Telemetría Modbus/TCP en Vivo",
+        "tank_matrix": "Matriz de Niveles de Tanque",
+        "oed_solver": "Motor de Física OED",
+        "target_oed": "OED Objetivo",
+        "fuel_savings": "Ahorro de Combustible Proyectado",
+        "executing": "TRANSMITIENDO AL PLC...",
+        "apply_correction": "APLICAR CORRECCIÓN DE LASTRE",
+        "audit_warning": "LA ACCIÓN QUEDARÁ REGISTRADA EN LA AUDITORÍA TÉCNICA",
+        "pumps_active": "Bombas Activadas. Ajustando lastre a OED.",
+        "pump_fail": "Timeout en la Conexión PLC."
     }
 }

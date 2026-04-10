@@ -52,12 +52,7 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
     { id: 'Certify', icon: Verified, label: t('v5.manifest', 'Manifest') },
   ];
 
-  const handleEasterEgg = (e: React.MouseEvent) => {
-    if (e.detail === 5) {
-      const newUrl = prompt("SOVEREIGN OVERRIDE:\nEnter local tunnel URL:", useStore.getState().edgeUrl);
-      if (newUrl) useStore.getState().setEdgeUrl(newUrl);
-    }
-  };
+
 
   return (
     <div className="bg-[#0a0e1a] text-[#dfe2f3] h-screen flex flex-col font-body selection:bg-[#e9c349] selection:text-[#3c2f00] overflow-hidden">
@@ -66,8 +61,7 @@ export default function LayoutV5({ children }: { children: React.ReactNode }) {
       <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0a0e1a] border-b border-[#e9c349]/5">
         <div className="flex items-center gap-8">
           <h1 
-            onClick={handleEasterEgg}
-            className="text-2xl font-black text-[#e9c349] tracking-tighter font-headline flex items-center gap-2 cursor-pointer select-none group"
+            className="text-2xl font-black text-[#e9c349] tracking-tighter font-headline flex items-center gap-2 select-none group"
           >
             {t('v5.mission_title', 'PLIMSOLL SYSTEM')} <span className="text-[10px] bg-[#e9c349]/20 px-1.5 py-0.5 rounded tracking-widest text-[#e9c349] group-hover:bg-[#e9c349] group-hover:text-[#0a0e1a] transition-all">V5</span>
           </h1>

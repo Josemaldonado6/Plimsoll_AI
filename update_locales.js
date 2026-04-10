@@ -89,7 +89,19 @@ const additions = {
         'hub_updated': 'Cortex Hub Updated',
         'void_reason_prompt': 'Enter reason for invalidation (Legal Requirement):',
         'water_density': 'Water Density',
-        'kalman_gain': 'Kalman Gain Factor'
+        'kalman_gain': 'Kalman Gain Factor',
+        'ballast_control': 'Active Ballast Control',
+        'plc_connected': 'MODBUS/TCP: READY',
+        'live_telemetry': 'Live Modbus/TCP Telemetry',
+        'tank_matrix': 'Tank Level Matrix',
+        'oed_solver': 'OED Physics Solver',
+        'target_oed': 'Target OED',
+        'fuel_savings': 'Projected Fuel Savings',
+        'executing': 'TRANSMITTING TO PLC...',
+        'apply_correction': 'APPLY BALLAST CORRECTION',
+        'audit_warning': 'ACTION WILL BE LOGGED IN TECHNICAL AUDIT TRAIL',
+        'pumps_active': 'Pumps Engaged. Adjusting Ballast to OED.',
+        'pump_fail': 'PLC Connection Timeout.'
     },
     'es': {
         'ops_hub': 'Centro Ops',
@@ -176,7 +188,19 @@ const additions = {
         'hub_updated': 'Cortex Hub Actualizado',
         'void_reason_prompt': 'Ingrese el motivo de la invalidación (Requerimiento Legal):',
         'water_density': 'Densidad del Agua',
-        'kalman_gain': 'Factor de Ganancia Kalman'
+        'kalman_gain': 'Factor de Ganancia Kalman',
+        'ballast_control': 'Control Activo de Lastre',
+        'plc_connected': 'MODBUS/TCP: LISTO',
+        'live_telemetry': 'Telemetría Modbus/TCP en Vivo',
+        'tank_matrix': 'Matriz de Niveles de Tanque',
+        'oed_solver': 'Motor de Física OED',
+        'target_oed': 'OED Objetivo',
+        'fuel_savings': 'Ahorro de Combustible Proyectado',
+        'executing': 'TRANSMITIENDO AL PLC...',
+        'apply_correction': 'APLICAR CORRECCIÓN DE LASTRE',
+        'audit_warning': 'LA ACCIÓN QUEDARÁ REGISTRADA EN LA AUDITORÍA TÉCNICA',
+        'pumps_active': 'Bombas Activadas. Ajustando lastre a OED.',
+        'pump_fail': 'Timeout en la Conexión PLC.'
     },
     'pt': {
         'ops_hub': 'Centro Ops',
@@ -263,7 +287,19 @@ const additions = {
         'hub_updated': 'Cortex Hub Atualizado',
         'void_reason_prompt': 'Insira o motivo da invalidação (Requisito Legal):',
         'water_density': 'Densidade da Água',
-        'kalman_gain': 'Fator de Ganho de Kalman'
+        'kalman_gain': 'Fator de Ganho de Kalman',
+        'ballast_control': 'Controle Ativo de Lastro',
+        'plc_connected': 'MODBUS/TCP: PRONTO',
+        'live_telemetry': 'Telemetria Modbus/TCP ao Vivo',
+        'tank_matrix': 'Matriz de Níveis de Tanque',
+        'oed_solver': 'Motor de Física OED',
+        'target_oed': 'OED Alvo',
+        'fuel_savings': 'Economia de Combustível Projetada',
+        'executing': 'TRANSMITINDO PARA O PLC...',
+        'apply_correction': 'APLICAR CORREÇÃO DE LASTRO',
+        'audit_warning': 'A AÇÃO SERÁ REGISTRADA NA AUDITORIA TÉCNICA',
+        'pumps_active': 'Bombas Ativadas. Ajustando lastro para OED.',
+        'pump_fail': 'Timeout na Conexão PLC.'
     },
     'zh': {
         'ops_hub': '运营中心',
@@ -350,7 +386,19 @@ const additions = {
         'hub_updated': 'Cortex Hub 已更新',
         'void_reason_prompt': '输入作废原因（法定要求）：',
         'water_density': '海水密度',
-        'kalman_gain': '卡尔曼增益因子'
+        'kalman_gain': '卡尔曼增益因子',
+        'ballast_control': '主动压载控制',
+        'plc_connected': 'MODBUS/TCP: 就绪',
+        'live_telemetry': '实时 Modbus/TCP 遥测',
+        'tank_matrix': '压载舱液位矩阵',
+        'oed_solver': 'OED 物理求解器',
+        'target_oed': '目标 OED',
+        'fuel_savings': '预计燃料节省',
+        'executing': '正在传输到 PLC...',
+        'apply_correction': '应用压载修正',
+        'audit_warning': '操作将被记录在技术审计日志中',
+        'pumps_active': '泵已启动。正在调整压载至 OED。',
+        'pump_fail': 'PLC 连接超时。'
     }
 };
 
