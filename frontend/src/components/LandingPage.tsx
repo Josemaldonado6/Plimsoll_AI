@@ -29,7 +29,6 @@ import PricingCalculator from './PricingCalculator';
 import GlobalParticles from './GlobalParticles';
 import { ProtocolExplainer } from './ProtocolExplainer';
 import { ComplianceFramework } from './ComplianceFramework';
-import { BallastMonitor } from './BallastMonitor';
 import { ENTERPRISE_PLANS } from '../services/StripeCommercial';
 
 function cn(...inputs: ClassValue[]) {
@@ -403,8 +402,6 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                             {t('landing.ballast_desc', 'Reduce fuel consumption by up to 12% through real-time PLC ballast adjustments based on neural hydrodynamic feedback.')}
                         </p>
                     </div>
-
-                    <BallastMonitor />
                 </div>
             </section>
 
